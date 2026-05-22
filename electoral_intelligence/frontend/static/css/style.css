@@ -311,6 +311,24 @@ table {
     overflow-wrap: anywhere;
 }
 
+.assistant-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-self: stretch;
+}
+
+.assistant-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0;
+    white-space: nowrap;
+}
+
 .assistant-history {
     border-top: 1px solid var(--border-color);
     padding-top: 12px;
@@ -424,10 +442,6 @@ table {
         padding: 0.55rem 0.8rem;
     }
 
-    .d-grid.gap-2 {
-        gap: 0.75rem !important;
-    }
-
     .metric-card .card-text {
         font-size: 1.8rem;
     }
@@ -440,12 +454,17 @@ table {
         font-size: 0.8rem;
     }
 
-    .ai-assistant-card .col-lg-4 {
-        display: block !important;
+    .ai-assistant-card .row {
+        gap: 14px 0;
     }
 
-    #ask-ai-btn {
+    .assistant-actions {
+        gap: 12px;
+    }
+
+    .assistant-actions .btn {
         width: 100%;
+        min-height: 46px;
     }
 
     #competitiveness-chart,
