@@ -1,0 +1,54 @@
+services:
+  - type: web
+    name: embakasi-electoral-intelligence
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: MYSQL_STRICT
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      - key: DB_TABLE_PREFIX
+        value: eii_
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_USERNAME
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: MYSQL_HOST
+        sync: false
+      - key: MYSQL_PORT
+        sync: false
+      - key: MYSQL_DATABASE
+        sync: false
+      - key: MYSQL_USER
+        sync: false
+      - key: MYSQL_PASSWORD
+        sync: false
+      - key: MYSQL_SSL_CA
+        sync: false
+      - key: MYSQL_SSL_CA_CONTENT
+        sync: false
+      - key: MYSQL_SSL_DISABLED
+        value: "false"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: GROQ_REQUESTS_PER_MINUTE_PER_KEY
+        value: "2"
+      - key: GROQ_REQUESTS_PER_DAY_PER_KEY
+        value: "100"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_REQUESTS_PER_MINUTE
+        value: "8"

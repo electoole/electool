@@ -1,0 +1,550 @@
+/* Electoral Intelligence Dashboard Styles */
+
+:root {
+    --primary-color: #2c3e50;
+    --danger-color: #e74c3c;
+    --success-color: #27ae60;
+    --warning-color: #f39c12;
+    --info-color: #3498db;
+    --light-color: #ecf0f1;
+    --page-bg: #f6f7f9;
+    --surface-bg: #ffffff;
+    --surface-alt: #f8f9fa;
+    --text-color: #1f2933;
+    --muted-color: #5f6b7a;
+    --border-color: #d8dee6;
+    --table-hover-bg: #f8f9fa;
+    --navbar-border: #202a33;
+    --assistant-bg: #f8f9fa;
+    --input-bg: #ffffff;
+    --input-color: #1f2933;
+    --input-border: #c9d1dc;
+}
+
+html[data-theme="dark"] {
+    --primary-color: #9fb7d8;
+    --danger-color: #f87171;
+    --success-color: #34d399;
+    --warning-color: #fbbf24;
+    --info-color: #60a5fa;
+    --light-color: #273244;
+    --page-bg: #101820;
+    --surface-bg: #17212b;
+    --surface-alt: #1e2b37;
+    --text-color: #e5edf5;
+    --muted-color: #a6b3c2;
+    --border-color: #304050;
+    --table-hover-bg: #22303d;
+    --navbar-border: #304050;
+    --assistant-bg: #14202b;
+    --input-bg: #101820;
+    --input-color: #e5edf5;
+    --input-border: #3a4a5c;
+}
+
+body {
+    background-color: var(--page-bg);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-color);
+    overflow-x: hidden;
+}
+
+/* Navigation */
+.navbar {
+    box-shadow: none;
+    border-bottom: 1px solid var(--navbar-border);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.2rem;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.theme-toggle {
+    width: 46px;
+    height: 26px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 999px;
+    background: transparent;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.theme-toggle:focus-visible {
+    outline: 2px solid var(--info-color);
+    outline-offset: 2px;
+}
+
+.theme-toggle-icon {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.45;
+}
+
+html[data-theme="light"] .theme-toggle-sun,
+html[data-theme="dark"] .theme-toggle-moon {
+    opacity: 1;
+}
+
+.text-muted {
+    color: var(--muted-color) !important;
+}
+
+.form-control,
+.form-select {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+    border-color: var(--input-border);
+}
+
+.form-control:focus,
+.form-select:focus {
+    background-color: var(--input-bg);
+    color: var(--input-color);
+}
+
+.form-control::placeholder {
+    color: var(--muted-color);
+}
+
+.list-group-item {
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.alert-light {
+    background-color: var(--surface-alt);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.modal-content {
+    background-color: var(--surface-bg);
+    color: var(--text-color);
+}
+
+/* Cards */
+.card {
+    border: 1px solid var(--border-color);
+    box-shadow: none;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+}
+
+/* Metric Cards */
+.metric-card {
+    text-align: left;
+    padding: 16px;
+    background: var(--surface-bg);
+    color: var(--text-color);
+    border-left: 4px solid var(--primary-color);
+}
+
+.metric-card .card-title {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--muted-color) !important;
+}
+
+.metric-card .card-text {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 8px 0 0;
+}
+
+.metric-critical {
+    border-left-color: var(--danger-color);
+}
+
+.metric-high {
+    border-left-color: var(--warning-color);
+}
+
+/* Tables */
+table {
+    font-size: 0.9rem;
+}
+
+.table thead {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.table tbody tr:hover {
+    background-color: var(--table-hover-bg);
+}
+
+.table {
+    --bs-table-bg: var(--surface-bg);
+    --bs-table-color: var(--text-color);
+    --bs-table-border-color: var(--border-color);
+    --bs-table-hover-bg: var(--table-hover-bg);
+    --bs-table-hover-color: var(--text-color);
+}
+
+.table-light,
+.bg-light {
+    --bs-table-bg: var(--surface-alt);
+    --bs-table-color: var(--text-color);
+    background-color: var(--surface-alt) !important;
+    color: var(--text-color) !important;
+}
+
+/* Status Badges */
+.badge-safe {
+    background-color: var(--success-color);
+}
+
+.badge-leaning {
+    background-color: #3498db;
+}
+
+.badge-battleground {
+    background-color: var(--warning-color);
+}
+
+.badge-contested {
+    background-color: var(--danger-color);
+}
+
+.badge-critical {
+    background-color: #c0392b;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* Tabs */
+.nav-tabs .nav-link {
+    color: var(--muted-color);
+    border: none;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+}
+
+.nav-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+.nav-tabs .nav-link:hover {
+    border-bottom-color: var(--primary-color);
+}
+
+.nav-tabs .nav-link.active {
+    background-color: transparent;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Chart containers */
+#competitiveness-chart,
+#mobilization-chart,
+#results-summary {
+    width: 100%;
+    max-width: 100%;
+    min-height: 320px;
+    overflow: hidden;
+}
+
+.js-plotly-plot,
+.plot-container,
+.svg-container {
+    max-width: 100% !important;
+}
+
+.card-body {
+    overflow-x: hidden;
+}
+
+.issue-response-card {
+    min-height: 100%;
+}
+
+.issue-response-card h6 {
+    line-height: 1.25;
+}
+
+.issue-response-card p {
+    overflow-wrap: anywhere;
+}
+
+.assistant-history {
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
+}
+
+.assistant-history-list {
+    display: grid;
+    gap: 8px;
+}
+
+.assistant-history-item {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border-color);
+    background: var(--surface-alt);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 10px 12px;
+}
+
+.assistant-history-item strong {
+    display: block;
+    font-size: 0.92rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.assistant-history-item span {
+    display: block;
+    color: var(--muted-color);
+    font-size: 0.78rem;
+    margin-top: 2px;
+}
+
+.table-responsive,
+#polling-stations-table,
+#battlegrounds-table,
+#critical-priority-table,
+#high-priority-table,
+#untapped-voters-table,
+#historical-results-table,
+#sentiment-table,
+#voter-issues {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Loading spinner */
+.spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .navbar .container-fluid {
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .navbar-brand {
+        max-width: calc(100vw - 32px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .navbar-text {
+        order: 3;
+        width: 100%;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        line-height: 1.25;
+    }
+
+    .navbar .btn {
+        margin-left: auto;
+    }
+
+    .container-fluid.py-4 {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .display-5 {
+        font-size: 1.55rem;
+        line-height: 1.2;
+    }
+
+    .card-body {
+        padding: 0.85rem;
+    }
+
+    .metric-card .card-text {
+        font-size: 1.8rem;
+    }
+    
+    #metrics-row .col-md-3 {
+        margin-bottom: 15px;
+    }
+    
+    table {
+        font-size: 0.8rem;
+    }
+
+    .ai-assistant-card .col-lg-4 {
+        display: block !important;
+    }
+
+    #ask-ai-btn {
+        width: 100%;
+    }
+
+    #competitiveness-chart,
+    #mobilization-chart,
+    #results-summary {
+        min-height: 280px;
+    }
+
+    footer .text-end {
+        text-align: start !important;
+        margin-top: 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .theme-toggle {
+        width: 42px;
+    }
+
+    .metric-card {
+        padding: 12px;
+    }
+
+    .metric-card .card-text {
+        font-size: 1.55rem;
+    }
+
+    .nav-tabs .nav-link {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        font-size: 0.88rem;
+    }
+
+    .assistant-response {
+        padding: 12px;
+    }
+}
+
+/* Header styling */
+.display-5 {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* Card headers */
+.card-header {
+    border-bottom: 1px solid var(--border-color);
+    border-radius: 4px 4px 0 0 !important;
+}
+
+.card-header h5,
+.card-header h6 {
+    margin-bottom: 0;
+    font-weight: 600;
+}
+
+/* Footer */
+footer {
+    margin-top: 50px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+/* Data cells */
+td.metric {
+    font-weight: 600;
+}
+
+.text-safe {
+    color: var(--success-color);
+}
+
+.text-battleground {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* Info boxes */
+.info-box {
+    padding: 15px;
+    border-left: 4px solid var(--info-color);
+    background-color: var(--surface-alt);
+    border-radius: 4px;
+    margin-bottom: 15px;
+}
+
+.ai-assistant-card textarea {
+    resize: vertical;
+}
+
+.ai-answer {
+    min-height: 44px;
+}
+
+.assistant-response {
+    background: var(--assistant-bg);
+    border-left: 4px solid var(--info-color);
+    border-radius: 6px;
+    padding: 14px 16px;
+    line-height: 1.5;
+}
+
+.assistant-response h6 {
+    font-size: 0.98rem;
+    font-weight: 700;
+    margin: 0 0 0.65rem;
+}
+
+.assistant-response h6:not(:first-child) {
+    margin-top: 1rem;
+}
+
+.assistant-response ul,
+.assistant-response ol {
+    margin: 0 0 0.9rem 1.25rem;
+    padding-left: 0.75rem;
+}
+
+.assistant-response li {
+    margin-bottom: 0.45rem;
+}
+
+.assistant-response p:last-child {
+    margin-bottom: 0;
+}
+
+/* Utility classes */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.opacity-50 {
+    opacity: 0.5;
+}

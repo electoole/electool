@@ -1,0 +1,60 @@
+# Ignore everything by default so the GitHub repo only contains the deployable app.
+*
+
+# Deployment/runtime files
+!.gitignore
+!.env.example
+!Procfile
+!render.yaml
+!runtime.txt
+!requirements.txt
+!DEPLOYMENT.md
+!README.md
+!simple_app.py
+!database.py
+!canonical_data_loader.py
+!ai_assistant.py
+
+# Runtime package used by the app
+!electoral_intelligence/
+electoral_intelligence/*
+!electoral_intelligence/backend/
+electoral_intelligence/backend/*
+!electoral_intelligence/backend/admin_panel.py
+!electoral_intelligence/frontend/
+electoral_intelligence/frontend/*
+!electoral_intelligence/frontend/templates/
+electoral_intelligence/frontend/templates/*
+!electoral_intelligence/frontend/templates/dashboard.html
+!electoral_intelligence/frontend/templates/admin_dashboard.html
+!electoral_intelligence/frontend/templates/admin_login.html
+!electoral_intelligence/frontend/static/
+electoral_intelligence/frontend/static/*
+!electoral_intelligence/frontend/static/css/
+electoral_intelligence/frontend/static/css/*
+!electoral_intelligence/frontend/static/css/style.css
+!electoral_intelligence/frontend/static/js/
+electoral_intelligence/frontend/static/js/*
+!electoral_intelligence/frontend/static/js/app.js
+
+# Extracted one-time data snapshots used to seed SQLite/MySQL.
+!data/
+data/*
+!data/extracted_real/
+data/extracted_real/*
+!data/extracted_real/*.csv
+
+# Always keep secrets and local state out of Git.
+.env
+*.pem
+*.key
+*.crt
+*.db
+*.sqlite
+*.sqlite3
+__pycache__/
+*.pyc
+.pytest_cache/
+server.out
+server.err
+electoral_intelligence/data/uploads/

@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Electoral Intelligence - Admin Panel</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: #f6f7f9;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
+        }
+        
+        .admin-container {
+            background: white;
+            border: 1px solid #d8dee6;
+            border-radius: 4px;
+            box-shadow: none;
+            margin: 20px auto;
+            max-width: 1400px;
+            overflow: hidden;
+        }
+        
+        .admin-header {
+            background: #1f2933;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .admin-header h1 {
+            margin: 0;
+            font-weight: 700;
+            font-size: 2.5rem;
+        }
+        
+        .admin-header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .tabs-nav {
+            display: flex;
+            border-bottom: 2px solid #f0f0f0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .tab-button {
+            padding: 15px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            flex: 0 0 auto;
+        }
+        
+        .tab-button:hover {
+            color: #667eea;
+        }
+        
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            font-weight: 600;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 30px;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 4px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+        
+        .upload-area:hover {
+            background: #f0f2ff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area.dragover {
+            background: #e8ebff;
+            border-color: #764ba2;
+        }
+        
+        .upload-area i {
+            font-size: 3rem;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .card-stat {
+            background: #ffffff;
+            color: #1f2933;
+            border: 1px solid #d8dee6;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .card-stat .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .card-stat .stat-label {
+            font-size: 0.9rem;
+            color: #5f6b7a;
+            margin-top: 5px;
+        }
+        
+        .data-table {
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .data-table thead {
+            background: #667eea;
+            color: white;
+        }
+        
+        .data-table tbody tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .btn-action {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            margin: 2px;
+        }
+        
+        .alert-status {
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .form-section {
+            background: #f8f9ff;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .form-section h4 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .manual-form {
+            background: #f8f9ff;
+            border-radius: 4px;
+            padding: 30px;
+            border: 2px solid #667eea;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner-border {
+            color: #667eea;
+        }
+
+        .table-responsive {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        #tableContainer {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 768px) {
+            .admin-container {
+                margin: 0;
+                border-left: 0;
+                border-right: 0;
+                border-radius: 0;
+                min-height: 100vh;
+            }
+
+            .admin-header {
+                padding: 18px 12px;
+                text-align: left;
+            }
+
+            .admin-header h1 {
+                font-size: 1.45rem;
+                line-height: 1.2;
+            }
+
+            .admin-header p {
+                font-size: 0.95rem;
+            }
+
+            .admin-header form {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .tabs-nav {
+                padding: 0 6px;
+            }
+
+            .tab-button {
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+
+            .tab-content {
+                padding: 16px 12px;
+            }
+
+            .upload-area {
+                padding: 24px 12px;
+            }
+
+            .upload-area i {
+                font-size: 2rem;
+            }
+
+            .manual-form {
+                padding: 16px;
+            }
+
+            .form-section {
+                padding: 14px;
+            }
+
+            .card-stat {
+                padding: 14px;
+            }
+
+            .card-stat .stat-value {
+                font-size: 1.6rem;
+            }
+
+            table {
+                font-size: 0.82rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="bi bi-gear"></i> Electoral Intelligence Admin Panel</h1>
+            <p>Manage polling data, candidate information, and sentiment analysis</p>
+            <form method="post" action="/admin/logout" class="mt-3">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <a class="btn btn-outline-light btn-sm me-2" href="/">Back to Dashboard</a>
+                <button class="btn btn-light btn-sm" type="submit">Sign out</button>
+            </form>
+        </div>
+        
+        <!-- Navigation Tabs -->
+        <div class="tabs-nav">
+            <button class="tab-button active" onclick="switchTab('overview', event)">
+                <i class="bi bi-graph-up"></i> Overview
+            </button>
+            <button class="tab-button" onclick="switchTab('upload', event)">
+                <i class="bi bi-cloud-upload"></i> Upload Data
+            </button>
+            <button class="tab-button" onclick="switchTab('manual', event)">
+                <i class="bi bi-pencil-square"></i> Manual Entry
+            </button>
+            <button class="tab-button" onclick="switchTab('manage', event)">
+                <i class="bi bi-table"></i> Manage Tables
+            </button>
+            <button class="tab-button" onclick="switchTab('export', event)">
+                <i class="bi bi-download"></i> Export Data
+            </button>
+            <button class="tab-button" onclick="switchTab('audit', event)">
+                <i class="bi bi-shield-check"></i> Audit
+            </button>
+        </div>
+        
+        <!-- Tab Contents -->
+        <div class="tab-content active" id="overview">
+            <h3 class="mb-4">Dashboard Overview</h3>
+            <div class="row" id="statsContainer">
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <div class="stat-value" id="stat-polling_stations">0</div>
+                        <div class="stat-label">Polling Stations</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <div class="stat-value" id="stat-candidate_profiles">0</div>
+                        <div class="stat-label">Candidates</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <div class="stat-value" id="stat-polling_results">0</div>
+                        <div class="stat-label">Polling Results</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <div class="stat-value" id="stat-sentiment_data">0</div>
+                        <div class="stat-label">Sentiment Records</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <div class="stat-value" id="stat-demographics">0</div>
+                        <div class="stat-label">Demographics</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4">
+                <i class="bi bi-info-circle"></i>
+                <strong>System Status:</strong> Admin panel ready for data management. Upload CSV files or manually enter records using the tabs above.
+            </div>
+        </div>
+        
+        <!-- Upload Tab -->
+        <div class="tab-content" id="upload">
+            <h3 class="mb-4">Upload Data</h3>
+            
+            <div class="form-section">
+                <h4>Select Data Type</h4>
+                <div class="mb-3">
+                    <label class="form-label">Which data are you uploading?</label>
+                    <select id="uploadTableSelect" class="form-select" onchange="showUploadSchema(this.value)">
+                        <option value="">-- Select Data Type --</option>
+                        <option value="polling_stations">Polling Stations</option>
+                        <option value="candidate_profiles">Candidate Profiles</option>
+                        <option value="polling_results">Polling Results (by Station)</option>
+                        <option value="sentiment_data">Social Sentiment Data</option>
+                        <option value="demographics">Demographics Data</option>
+                        <option value="historical_winners">Historical Winners</option>
+                        <option value="ward_registration">Ward Registration</option>
+                    </select>
+                </div>
+                <p class="text-muted small">
+                    <i class="bi bi-exclamation-circle"></i>
+                    Select the table type. Your CSV must have the correct columns.
+                </p>
+                <div id="uploadSchemaHelp" class="alert alert-secondary mt-3" style="display:none;"></div>
+            </div>
+            
+            <div class="form-section">
+                <h4>Merge Mode</h4>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="mergeMode" id="mergeReplace" value="replace" checked>
+                    <label class="form-check-label" for="mergeReplace">
+                        <strong>Replace:</strong> Delete existing data and insert new
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="mergeMode" id="mergeAppend" value="append">
+                    <label class="form-check-label" for="mergeAppend">
+                        <strong>Append:</strong> Keep existing data and add new records
+                    </label>
+                </div>
+            </div>
+            
+            <div class="form-section">
+                <h4>Select File</h4>
+                <div class="upload-area" id="uploadArea">
+                    <i class="bi bi-file-earmark-arrow-up"></i>
+                    <p class="mb-1"><strong>Drag and drop your file here</strong></p>
+                    <p class="text-muted small mb-3">or click to browse (CSV or XLSX)</p>
+                    <input type="file" id="fileInput" accept=".csv,.xlsx" style="display:none">
+                </div>
+            </div>
+            
+            <div id="uploadResult" style="display:none;"></div>
+            <button class="btn btn-primary btn-lg mt-4" id="uploadBtn" style="display:none;">
+                <i class="bi bi-cloud-upload"></i> Upload & Process
+            </button>
+        </div>
+        
+        <!-- Manual Entry Tab -->
+        <div class="tab-content" id="manual">
+            <h3 class="mb-4">Manual Data Entry</h3>
+            
+            <div class="form-section">
+                <label class="form-label"><strong>Select Data Type to Add</strong></label>
+                <select id="manualTableSelect" class="form-select" onchange="loadManualForm(this.value)">
+                    <option value="">-- Select Data Type --</option>
+                    <option value="polling_stations">Add Polling Station</option>
+                    <option value="candidate_profiles">Add Candidate</option>
+                    <option value="polling_results">Add Polling Result</option>
+                    <option value="sentiment_data">Add Sentiment Record</option>
+                    <option value="demographics">Add Demographics</option>
+                    <option value="historical_winners">Add Historical Winner</option>
+                    <option value="ward_registration">Add Ward Registration</option>
+                </select>
+            </div>
+            
+            <div id="manualFormContainer"></div>
+        </div>
+        
+        <!-- Manage Tables Tab -->
+        <div class="tab-content" id="manage">
+            <h3 class="mb-4">Manage Data Tables</h3>
+            
+            <div class="form-section">
+                <label class="form-label"><strong>Select Table to View</strong></label>
+                <select id="tableSelect" class="form-select" onchange="loadTableData(this.value)">
+                    <option value="">-- Select Table --</option>
+                    <option value="polling_stations">Polling Stations</option>
+                    <option value="candidate_profiles">Candidates</option>
+                    <option value="polling_results">Polling Results</option>
+                    <option value="sentiment_data">Sentiment Data</option>
+                    <option value="demographics">Demographics</option>
+                    <option value="historical_winners">Historical Winners</option>
+                    <option value="ward_registration">Ward Registration</option>
+                </select>
+            </div>
+            
+            <div id="tableContainer" style="margin-top:20px;"></div>
+        </div>
+        
+        <!-- Export Tab -->
+        <div class="tab-content" id="export">
+            <h3 class="mb-4">Export Data</h3>
+            
+            <p class="text-muted mb-4">Download data as CSV for backup or external analysis</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('polling_stations')">
+                        <i class="bi bi-download"></i> Export Polling Stations
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('candidate_profiles')">
+                        <i class="bi bi-download"></i> Export Candidates
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('polling_results')">
+                        <i class="bi bi-download"></i> Export Polling Results
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('sentiment_data')">
+                        <i class="bi bi-download"></i> Export Sentiment Data
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('demographics')">
+                        <i class="bi bi-download"></i> Export Demographics
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('historical_winners')">
+                        <i class="bi bi-download"></i> Export Historical Winners
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <button class="btn btn-outline-primary w-100 mb-3" onclick="exportTable('ward_registration')">
+                        <i class="bi bi-download"></i> Export Ward Registration
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audit Tab -->
+        <div class="tab-content" id="audit">
+            <h3 class="mb-4">Audit & Change Control</h3>
+
+            <div class="alert alert-secondary">
+                <strong>Operational controls:</strong> uploads, manual inserts, exports, logins, and logouts are recorded. Replace uploads also create a database snapshot before the table is overwritten.
+            </div>
+
+            <div class="row">
+                <div class="col-lg-8">
+                    <h5>Recent Admin Activity</h5>
+                    <div id="auditLogContainer" class="table-responsive"></div>
+                </div>
+                <div class="col-lg-4">
+                    <h5>Pre-Replace Snapshots</h5>
+                    <div id="versionContainer" class="table-responsive"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // ====================================================================
+        // TAB SWITCHING
+        // ====================================================================
+        
+        function switchTab(tabName, event) {
+            event.preventDefault();
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Deactivate all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName).classList.add('active');
+            event.target.closest('.tab-button').classList.add('active');
+            if (tabName === 'audit') {
+                loadAuditLog();
+                loadVersions();
+            }
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
+        // ====================================================================
+        // OVERVIEW: LOAD STATISTICS
+        // ====================================================================
+        
+        function loadStats() {
+            $.get('/admin/api/stats', function(data) {
+                for (let table in data) {
+                    const elem = document.getElementById(`stat-${table}`);
+                    if (elem) {
+                        elem.textContent = data[table].toLocaleString();
+                    }
+                }
+            });
+        }
+
+        let tableSchemas = {};
+
+        function loadTableSchemas() {
+            $.get('/admin/api/tables', function(data) {
+                tableSchemas = data || {};
+                const selected = document.getElementById('uploadTableSelect')?.value;
+                if (selected) showUploadSchema(selected);
+            });
+        }
+
+        function showUploadSchema(table) {
+            const box = document.getElementById('uploadSchemaHelp');
+            if (!box) return;
+            if (!table || !tableSchemas[table]) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+                return;
+            }
+            const schema = tableSchemas[table];
+            const required = schema.required_columns || [];
+            const templateColumns = schema.template_columns || required;
+            box.innerHTML = `
+                <div class="d-flex flex-column flex-md-row justify-content-between gap-2">
+                    <div>
+                        <strong>${escapeHtml(schema.description || table)}</strong>
+                        <div class="small mt-2"><strong>Required columns:</strong> <code>${escapeHtml(required.join(', '))}</code></div>
+                        <div class="small mt-1"><strong>Template columns:</strong> <code>${escapeHtml(templateColumns.join(', '))}</code></div>
+                        <div class="small mt-1">${escapeHtml(schema.template_notes || '')}</div>
+                    </div>
+                    <div>
+                        <a class="btn btn-outline-primary btn-sm" href="/admin/api/template/${encodeURIComponent(table)}">
+                            <i class="bi bi-filetype-csv"></i> Download CSV Template
+                        </a>
+                    </div>
+                </div>
+            `;
+            box.style.display = 'block';
+        }
+        
+        // Load stats on page load
+        $(document).ready(function() {
+            $.ajaxSetup({
+                headers: {'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content}
+            });
+            loadTableSchemas();
+            loadStats();
+            loadAuditLog();
+            loadVersions();
+            setInterval(loadStats, 5000);  // Refresh every 5 seconds
+        });
+        
+        // ====================================================================
+        // UPLOAD: FILE HANDLING
+        // ====================================================================
+        
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('click', () => fileInput.click());
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = e.dataTransfer.files;
+            showUploadButton();
+        });
+        
+        fileInput.addEventListener('change', showUploadButton);
+        
+        function showUploadButton() {
+            const btn = document.getElementById('uploadBtn');
+            if (fileInput.files.length > 0) {
+                btn.style.display = 'block';
+            }
+        }
+        
+        document.getElementById('uploadBtn').addEventListener('click', uploadFile);
+        
+        function uploadFile() {
+            const file = fileInput.files[0];
+            const table = document.getElementById('uploadTableSelect').value;
+            const mergeMode = document.querySelector('input[name="mergeMode"]:checked').value;
+            
+            if (!file || !table) {
+                alert('Please select both a file and data type');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('table_name', table);
+            formData.append('merge_mode', mergeMode);
+            
+            $.ajax({
+                url: '/admin/api/upload',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    showResult('success', response);
+                    loadStats();
+                },
+                error: function(error) {
+                    showResult('error', error.responseJSON);
+                }
+            });
+        }
+        
+        function showResult(type, data) {
+            const resultDiv = document.getElementById('uploadResult');
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            resultDiv.innerHTML = `
+                <div class="alert ${alertClass}">
+                    <strong>${type === 'success' ? 'Success!' : 'Error!'}</strong>
+                    <p>${data.message || data.error}</p>
+                    ${data.details ? `<pre>${JSON.stringify(data.details, null, 2)}</pre>` : ''}
+                </div>
+            `;
+            resultDiv.style.display = 'block';
+        }
+        
+        // ====================================================================
+        // MANAGE TABLES: VIEW DATA
+        // ====================================================================
+        
+        function loadTableData(table) {
+            if (!table) return;
+            
+            $.get(`/admin/api/data/${table}`, function(response) {
+                let html = `<h5>Table: ${table} (${response.row_count} rows)</h5>`;
+                html += '<div class="table-responsive">';
+                html += '<table class="table table-sm table-hover data-table">';
+                
+                if (response.data.length > 0) {
+                    const cols = Object.keys(response.data[0]);
+                    html += '<thead><tr>';
+                    cols.forEach(col => html += `<th>${escapeHtml(col)}</th>`);
+                    html += '</tr></thead><tbody>';
+                    
+                    response.data.forEach(row => {
+                        html += '<tr>';
+                        cols.forEach(col => html += `<td>${escapeHtml(row[col])}</td>`);
+                        html += '</tr>';
+                    });
+                    html += '</tbody>';
+                } else {
+                    html += '<tr><td colspan="10" class="text-center text-muted">No data</td></tr>';
+                }
+                
+                html += '</table></div>';
+                document.getElementById('tableContainer').innerHTML = html;
+            });
+        }
+        
+        // ====================================================================
+        // EXPORT DATA
+        // ====================================================================
+        
+        function exportTable(table) {
+            window.location.href = `/admin/api/export/${table}`;
+        }
+
+        function loadAuditLog() {
+            $.get('/admin/api/audit-log', function(response) {
+                const rows = response.data || [];
+                let html = '<table class="table table-sm table-hover data-table">';
+                html += '<thead><tr><th>Time</th><th>Admin</th><th>Action</th><th>Table</th><th>Rows</th><th>Status</th><th>Details</th></tr></thead><tbody>';
+                if (!rows.length) {
+                    html += '<tr><td colspan="7" class="text-muted text-center">No admin activity recorded yet.</td></tr>';
+                } else {
+                    rows.forEach(row => {
+                        html += '<tr>';
+                        html += `<td>${escapeHtml(row.created_at)}</td>`;
+                        html += `<td>${escapeHtml(row.admin_username)}</td>`;
+                        html += `<td>${escapeHtml(row.action)}</td>`;
+                        html += `<td>${escapeHtml(row.table_name)}</td>`;
+                        html += `<td>${Number(row.row_count || 0).toLocaleString()}</td>`;
+                        html += `<td><span class="badge ${row.status === 'success' ? 'bg-success' : 'bg-danger'}">${escapeHtml(row.status)}</span></td>`;
+                        html += `<td><code>${escapeHtml(row.details)}</code></td>`;
+                        html += '</tr>';
+                    });
+                }
+                html += '</tbody></table>';
+                document.getElementById('auditLogContainer').innerHTML = html;
+            });
+        }
+
+        function loadVersions() {
+            $.get('/admin/api/versions', function(response) {
+                const rows = response.data || [];
+                let html = '<table class="table table-sm table-hover data-table">';
+                html += '<thead><tr><th>Time</th><th>Table</th><th>Rows</th><th>Action</th></tr></thead><tbody>';
+                if (!rows.length) {
+                    html += '<tr><td colspan="4" class="text-muted text-center">No snapshots yet.</td></tr>';
+                } else {
+                    rows.forEach(row => {
+                        html += '<tr>';
+                        html += `<td>${escapeHtml(row.created_at)}</td>`;
+                        html += `<td>${escapeHtml(row.table_name)}</td>`;
+                        html += `<td>${Number(row.row_count || 0).toLocaleString()}</td>`;
+                        html += `<td>${escapeHtml(row.action)}</td>`;
+                        html += '</tr>';
+                    });
+                }
+                html += '</tbody></table>';
+                document.getElementById('versionContainer').innerHTML = html;
+            });
+        }
+        
+        // ====================================================================
+        // MANUAL FORM GENERATION
+        // ====================================================================
+        
+        function loadManualForm(table) {
+            if (!table) {
+                document.getElementById('manualFormContainer').innerHTML = '';
+                return;
+            }
+            
+            const schemas = {
+                polling_stations: [
+                    {name: 'polling_station_id', type: 'text', placeholder: 'TASSIA_PS_01'},
+                    {name: 'polling_station_name', type: 'text', placeholder: 'Tassia Primary School'},
+                    {name: 'registered_voters_2022', type: 'number', placeholder: '699'}
+                ],
+                candidate_profiles: [
+                    {name: 'candidate_name', type: 'text', placeholder: 'John Doe'},
+                    {name: 'party', type: 'text', placeholder: 'ODM'},
+                    {name: 'age', type: 'number', placeholder: '45'},
+                    {name: 'education', type: 'text', placeholder: 'Bachelor\'s'},
+                    {name: 'profession', type: 'text', placeholder: 'Teacher'}
+                ],
+                polling_results: [
+                    {name: 'polling_station_id', type: 'text', placeholder: 'TASSIA_PS_01'},
+                    {name: 'candidate_name', type: 'text', placeholder: 'John Doe'},
+                    {name: 'year', type: 'number', placeholder: '2022'},
+                    {name: 'votes', type: 'number', placeholder: '150'}
+                ],
+                sentiment_data: [
+                    {name: 'date', type: 'date'},
+                    {name: 'candidate_name', type: 'text', placeholder: 'John Doe'},
+                    {name: 'total_mentions', type: 'number', placeholder: '100'},
+                    {name: 'sentiment_score', type: 'number', placeholder: '0.5'},
+                    {name: 'primary_theme', type: 'text', placeholder: 'Water Supply'}
+                ],
+                demographics: [
+                    {name: 'unit_name', type: 'text', placeholder: 'Tassia'},
+                    {name: 'total_population_2019', type: 'number', placeholder: '88874'},
+                    {name: 'households', type: 'number', placeholder: '9200'},
+                    {name: 'male_population', type: 'number', placeholder: '22500'},
+                    {name: 'female_population', type: 'number', placeholder: '23300'}
+                ],
+                historical_winners: [
+                    {name: 'year', type: 'number', placeholder: '2022'},
+                    {name: 'candidate_name', type: 'text', placeholder: 'Nyantika Ricardo Billy'},
+                    {name: 'party', type: 'text', placeholder: 'ODM'},
+                    {name: 'votes', type: 'number', placeholder: '12877'}
+                ],
+                ward_registration: [
+                    {name: 'ward_code', type: 'text', placeholder: '1423'},
+                    {name: 'ward', type: 'text', placeholder: 'Embakasi'},
+                    {name: 'registered_voters_2022', type: 'number', placeholder: '46291'}
+                ]
+            };
+            
+            let html = `<form class="manual-form" onsubmit="submitManualForm(event, '${table}')">`;
+            html += `<h4>Add New ${table.replace(/_/g, ' ').toUpperCase()} Record</h4>`;
+            
+            schemas[table].forEach(field => {
+                html += `
+                    <div class="mb-3">
+                        <label class="form-label">${field.name}</label>
+                        <input type="${field.type}" class="form-control" name="${field.name}" placeholder="${field.placeholder || ''}" required>
+                    </div>
+                `;
+            });
+            
+            html += '<button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-circle"></i> Add Record</button>';
+            html += '</form>';
+            
+            document.getElementById('manualFormContainer').innerHTML = html;
+        }
+        
+        function submitManualForm(event, table) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+            
+            $.ajax({
+                url: `/admin/api/data/${table}`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    alert('Record added successfully!');
+                    event.target.reset();
+                    loadStats();
+                },
+                error: function(error) {
+                    alert('Error: ' + error.responseJSON.error);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

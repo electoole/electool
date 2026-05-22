@@ -1,0 +1,4 @@
+year,county_code,county,constituency_code,constituency,ward_code,ward,candidate_name,party,party_abbrev,votes,source_type,source_file,source_page,source_note
+2013,047,Nairobi City,285,Embakasi East,1423,Embakasi,Michael Ogada Okumu,Orange Democratic Movement,ODM,11625,official_pdf,IEBCHistoricalResults\2013-winner_data.pdf,755,Extracted from 2013 Embakasi Ward candidate table; winner row.
+2017,047,Nairobi City,285,Embakasi East,1423,Embakasi,Michael Ogada Okumu,Orange Democratic Movement,ODM,12359,official_pdf,IEBCHistoricalResults\2017-winner_data.pdf,43,Extracted from 2017 elected MCA winners table.
+2022,047,Nairobi City,285,Embakasi East,1423,Embakasi,Nyantika Ricardo Billy,Orange Democratic Movement,ODM,12877,official_pdf,IEBCHistoricalResults\2022-winner_data.pdf,39,Extracted from 2022 elected MCA winners table.

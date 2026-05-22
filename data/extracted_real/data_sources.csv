@@ -1,0 +1,12 @@
+source_key,source_file,source_type,description
+winner_2013,IEBCHistoricalResults\2013-winner_data.pdf,official_pdf,IEBC/Kenya Gazette 2013 elected MCA result and candidate table
+winner_2017,IEBCHistoricalResults\2017-winner_data.pdf,official_pdf,IEBC/Kenya Gazette 2017 elected MCA result
+winner_2022,IEBCHistoricalResults\2022-winner_data.pdf,official_pdf,IEBC/Kenya Gazette 2022 elected MCA result
+rov_caw,VoterRegistrationData\rov_per_caw.pdf,official_pdf,"IEBC registered voters per county assembly ward, 2022"
+rov_polling,VoterRegistrationData\rov_per_polling_station.pdf,official_pdf,"IEBC registered voters per polling station, 2022"
+rov_md,VoterRegistrationData\poilling Stations.md,third_party_markdown,"Kenyayote/IEBC copied polling-station table, retained for cross-check"
+knbs_xlsx,DemographicsData\2019-Kenya-population-and-Housing-Census-Population-households-density-by-sub-county.xlsx,official_xlsx,"KNBS 2019 census population, households, density by sub-county"
+knbs_pdf,DemographicsData\2019-Kenya-population-and-Housing-Census-Volume-2-Distribution-of-Population-by-Administrative-Units.pdf,official_pdf,KNBS 2019 census Volume II administrative-unit distribution
+placeholder_polling_results,,demo_placeholder,Generated because certified IEBC polling station + candidate results are missing.
+placeholder_candidate_intelligence,,demo_placeholder,Generated because 2027 aspirant/candidate intelligence is not yet collected.
+placeholder_social_sentiment,,demo_placeholder,Generated because real social sentiment data is not yet collected.

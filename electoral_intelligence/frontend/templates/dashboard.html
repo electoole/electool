@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hon. Silverster Ogina - Embakasi Ward Electoral Intelligence</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-map-marked-alt"></i> Hon. Silverster Ogina
+            </a>
+            <span class="navbar-text text-light ms-auto me-3">
+                <small>{{ summary.ward_name }} | {{ summary.constituency }} | {{ summary.timestamp }}</small>
+            </span>
+            <a class="btn btn-outline-light btn-sm me-2" href="/admin" title="Open admin panel">
+                <i class="fas fa-lock"></i> Admin
+            </a>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+                <svg class="theme-toggle-icon theme-toggle-sun" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+                </svg>
+                <svg class="theme-toggle-icon theme-toggle-moon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5Z"></path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid py-4">
+        
+        <!-- Header Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5">
+                    <i class="fas fa-poll"></i> Hon. Silverster Ogina - {{ summary.ward_name }} Electoral Intelligence
+                </h1>
+                <p class="text-muted">
+                    Incoming MCA campaign dashboard | {{ summary.constituency }}, Nairobi | Data-driven ground strategy
+                </p>
+            </div>
+        </div>
+
+        <!-- Key Metrics Row -->
+        <div class="row mb-4" id="metrics-row">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Total Polling Stations</h6>
+                        <h3 class="card-text">{{ summary.total_stations }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Average Turnout</h6>
+                        <h3 class="card-text">{{ summary.avg_turnout }}%</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card metric-critical">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Critical Priority</h6>
+                        <h3 class="card-text">{{ summary.critical_priority }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card metric-high">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">High Priority</h6>
+                        <h3 class="card-text">{{ summary.high_priority }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card ai-assistant-card">
+                    <div class="card-header bg-dark text-white">
+                        <h5 class="mb-0"><i class="fas fa-wand-magic-sparkles"></i> Campaign Assistant</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-lg-8">
+                                <textarea id="ai-question" class="form-control" rows="3" placeholder="Ask how Hon. Silverster Ogina should use the dashboard, which stations to prioritize, or what the data means."></textarea>
+                            </div>
+                            <div class="col-lg-4 d-grid gap-2">
+                                <button class="btn btn-primary" id="ask-ai-btn" onclick="askAssistant()">
+                                    <i class="fas fa-paper-plane"></i> Ask Assistant
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="clearAssistantWorkspace()">
+                                    <i class="fas fa-eraser"></i> Clear
+                                </button>
+                                <button class="btn btn-outline-secondary" type="button" onclick="toggleAssistantHistory()">
+                                    <i class="fas fa-clock-rotate-left"></i> Chat History
+                                </button>
+                            </div>
+                        </div>
+                        <div id="ai-answer" class="ai-answer mt-3"></div>
+                        <div id="ai-history-panel" class="assistant-history mt-3" style="display:none;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs for Different Views -->
+        <ul class="nav nav-tabs mb-4" role="tablist" id="main-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#overview">Overview</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#mobilization">Mobilization</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#polling-stations">Polling Stations</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#battlegrounds">Battlegrounds</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#candidates">Candidates</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#historical-results">Historical Results</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#sentiment">Sentiment / Issues</a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-pane fade show active">
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">Competitiveness Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="competitiveness-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">Mobilization Priorities</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="mobilization-chart"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-info text-white">
+                                <h5 class="mb-0">Current Candidate Result Input</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="results-summary"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidates Tab -->
+            <div id="candidates" class="tab-pane fade">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0"><i class="fas fa-users"></i> Candidate Register</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="nav nav-tabs mb-3" id="candidate-tabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" href="#candidates-2017" data-bs-toggle="tab">2017 Election</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#candidates-2022" data-bs-toggle="tab">2022 Election</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" href="#candidates-2027" data-bs-toggle="tab">2027 Aspirants</a>
+                                    </li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div id="candidates-2017" class="tab-pane fade show active">
+                                        <div id="candidates-2017-table"></div>
+                                    </div>
+                                    <div id="candidates-2022" class="tab-pane fade">
+                                        <div id="candidates-2022-table"></div>
+                                    </div>
+                                    <div id="candidates-2027" class="tab-pane fade">
+                                        <div id="candidates-2027-table"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historical Results Tab -->
+            <div id="historical-results" class="tab-pane fade">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-warning text-dark">
+                                <h5 class="mb-0"><i class="fas fa-chart-line"></i> Historical Winners</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Winner-level history for Embakasi Ward. Use this for trend context, not full candidate-by-candidate vote shift analysis.</p>
+                                <div id="historical-results-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sentiment Tab -->
+            <div id="sentiment" class="tab-pane fade">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0"><i class="fas fa-comments"></i> Sentiment / Issues</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">Compact holding area for candidate sentiment and recurring voter issues from public discussion, field notes, and resident interactions. Replace with verified reports when available.</p>
+                                <div id="sentiment-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mt-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Key Voter Issues</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="voter-issues"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Polling Stations Tab -->
+            <div id="polling-stations" class="tab-pane fade">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">All Polling Stations</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive" id="polling-stations-table"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Battlegrounds Tab -->
+            <div id="battlegrounds" class="tab-pane fade">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-fire"></i> Highly Competitive Stations
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">
+                            Stations with win margins < 10%. These are the swing zones that decide elections.
+                        </p>
+                        <div id="battlegrounds-table"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobilization Tab -->
+            <div id="mobilization" class="tab-pane fade">
+                <div class="alert alert-info border mb-4">
+                    Mobilization rankings are based on 2022 station-level turnout/result inputs and 2022 voter registration. Use them as the starting ground plan, then replace or update the inputs from the admin panel as newer field intelligence and verified results become available.
+                </div>
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-danger">
+                                <h6 class="text-white mb-0">Critical Priority Stations</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="critical-priority-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card">
+                            <div class="card-header bg-warning">
+                                <h6 class="text-dark mb-0">High Priority Stations</h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="high-priority-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header bg-info">
+                                <h6 class="text-white mb-0">Untapped Voter Opportunities</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted">
+                                    Stations with low turnout rates and high registered voters - prime targets for mobilization.
+                                </p>
+                                <div id="untapped-voters-table"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-6">
+                    <small>Electoral Intelligence System v1.0</small>
+                </div>
+                <div class="col-md-6 text-end">
+                    <small>Powered by Data Analytics & Polling Intelligence</small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/plotly.js@2.26.0/dist/plotly.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
