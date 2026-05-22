@@ -2,15 +2,11 @@
 """Electoral Intelligence Flask app for the Embakasi Ward MVP."""
 from __future__ import annotations
 
-import sqlite3
 import os
 import secrets
-from pathlib import Path
 
-import pandas as pd
 from flask import Flask, jsonify, render_template, request
 
-from canonical_data_loader import DB_PATH, compute_features, initialize_all, initialize_from_extracted_csv
 from database import DB
 from ai_assistant import ai_status, answer_question
 from electoral_intelligence.backend.admin_panel import admin_bp
@@ -30,9 +26,6 @@ app.config.update(
 )
 app.register_blueprint(admin_bp)
 
-DATABASE = str(DB_PATH)
-
-
 def ensure_database() -> None:
     DB.ensure()
 
@@ -47,13 +40,6 @@ def add_security_headers(response):
         "camera=(), microphone=(), geolocation=()",
     )
     return response
-
-
-def get_db_connection() -> sqlite3.Connection:
-    ensure_database()
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 
 def rows(query: str, args: tuple = ()) -> list[dict]:
@@ -145,15 +131,6 @@ ISSUE_ALIASES = {
     "business": "Business Permits",
     "business permits": "Business Permits",
 }
-
-
-def recompute_features_from_db() -> None:
-    """Recompute station features after admin replaces polling results/stations."""
-    with get_db_connection() as conn:
-        stations = pd.read_sql_query("SELECT * FROM polling_stations", conn)
-        results = pd.read_sql_query("SELECT * FROM polling_results", conn)
-        features = compute_features(stations, results)
-        features.to_sql("features", conn, if_exists="replace", index=False)
 
 
 @app.route("/")
@@ -310,6 +287,7 @@ def api_candidates():
             COALESCE(SUM(pr.votes), 0) AS total_votes
         FROM candidate_profiles cp
         LEFT JOIN polling_results pr ON cp.candidate_name = pr.candidate_name
+        WHERE cp.candidate_name = 'Hon. Silverster Ogina'
         GROUP BY cp.candidate_id, cp.candidate_name, cp.party, cp.status, cp.profile_summary, cp.source_type, cp.is_placeholder
         ORDER BY cp.is_placeholder ASC, total_votes DESC
         """
@@ -347,6 +325,7 @@ def api_candidates_performance_history():
                CASE WHEN candidate_name = 'Hon. Silverster Ogina' THEN 0 ELSE is_placeholder END AS is_placeholder
         FROM candidate_profiles
         WHERE election_year = 2027
+          AND candidate_name = 'Hon. Silverster Ogina'
         ORDER BY candidate_name
         """
     )
@@ -553,10 +532,10 @@ def api_database_status():
             "success": True,
             "mysql_configured": DB.settings.mysql_enabled,
             "mysql_strict": DB.settings.mysql_strict,
-            "mysql_error": DB.last_mysql_error if not DB.using_mysql else "",
+            "mysql_error": DB.last_mysql_error,
             "using_mysql": DB.using_mysql,
-            "table_prefix": DB.settings.table_prefix if DB.using_mysql else "",
-            "storage": "mysql" if DB.using_mysql else "sqlite",
+            "table_prefix": DB.settings.table_prefix,
+            "storage": "mysql",
         }
     )
 

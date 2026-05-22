@@ -26,12 +26,12 @@ Set these in the Render dashboard. Do not commit real values.
 Render uses:
 
 ```bash
-gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
 ```
 
 ## Notes
 
 - The admin panel is at `/admin`.
 - Admin upload/manual-entry endpoints require login and CSRF protection.
-- `.env`, certificates, SQLite databases, raw PDFs, old extraction scripts, and local generated files are ignored by Git.
+- `.env`, certificates, local databases, raw PDFs, old extraction scripts, and local generated files are ignored by Git.
 - `data/extracted_real/*.csv` is intentionally included so the app can seed data without reparsing PDFs.

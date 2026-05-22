@@ -18,6 +18,8 @@ gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 1
 
 The same commands are already configured in `render.yaml`.
 
+MySQL is required in every environment. The app does not use SQLite fallback storage.
+
 ## Required Render Environment Variables
 
 Set these secrets in Render:
@@ -33,7 +35,7 @@ Set these secrets in Render:
 - `GROQ_API_KEY`
 - `GEMINI_API_KEY`
 
-The app uses prefixed database tables through `DB_TABLE_PREFIX=eii_`.
+The app uses prefixed database tables through `DB_TABLE_PREFIX=eii_`. On Render, prefer `MYSQL_SSL_CA_CONTENT` for hosted MySQL CA certificates because local certificate files are not committed.
 
 ## Sentiment Uploads
 

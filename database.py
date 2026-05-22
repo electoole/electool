@@ -1,12 +1,9 @@
-"""Database layer with SQLite fallback and prefixed MySQL support."""
+"""MySQL database layer with prefixed table support."""
 from __future__ import annotations
 
 import os
 import re
-import sqlite3
 import tempfile
-import time
-from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -19,12 +16,11 @@ except ImportError:  # pragma: no cover - app still works without dotenv install
     def load_dotenv(*args, **kwargs):
         return False
 
-from canonical_data_loader import DB_PATH, EXTRACTED_DIR, compute_features, initialize_all, initialize_from_extracted_csv
+from canonical_data_loader import EXTRACTED_DIR, compute_features
 
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
-INIT_LOCK_PATH = ROOT / "data" / ".db-init.lock"
 
 LOGICAL_TABLES = [
     "polling_stations",
@@ -89,46 +85,6 @@ def sanitize_prefix(prefix: str) -> str:
     return cleaned
 
 
-@contextmanager
-def file_lock(path: Path, timeout: int = 60):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    lock_file = path.open("w")
-    started = time.time()
-    locked = False
-    try:
-        while not locked:
-            try:
-                if os.name == "nt":
-                    import msvcrt
-
-                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
-                else:
-                    import fcntl
-
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                locked = True
-            except OSError:
-                if time.time() - started > timeout:
-                    raise TimeoutError(f"Timed out waiting for database init lock: {path}")
-                time.sleep(0.2)
-        yield
-    finally:
-        if locked:
-            try:
-                if os.name == "nt":
-                    import msvcrt
-
-                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
-                else:
-                    import fcntl
-
-                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
-            finally:
-                lock_file.close()
-        else:
-            lock_file.close()
-
-
 @dataclass(frozen=True)
 class DbSettings:
     mysql_host: str = _env("MYSQL_HOST", _env("DB_HOST"))
@@ -139,7 +95,7 @@ class DbSettings:
     mysql_ssl_ca: str = _env("MYSQL_SSL_CA")
     mysql_ssl_ca_content: str = os.getenv("MYSQL_SSL_CA_CONTENT", "").strip()
     mysql_ssl_disabled: bool = _env("MYSQL_SSL_DISABLED", "false").lower() in {"1", "true", "yes"}
-    mysql_strict: bool = _env_bool("MYSQL_STRICT", _env_bool("DB_REQUIRE_MYSQL", False))
+    mysql_strict: bool = True
     table_prefix: str = sanitize_prefix(_env("DB_TABLE_PREFIX", "eii_"))
 
     @property
@@ -157,27 +113,27 @@ class Database:
         self._mysql_available: bool | None = None
         self.last_mysql_error: str = ""
         self._ssl_ca_path: Path | None = None
+        self._ensured = False
 
     @property
     def using_mysql(self) -> bool:
-        return self.settings.mysql_enabled and self._mysql_available is not False
+        return self.settings.mysql_enabled
+
+    def require_mysql(self) -> None:
+        if not self.settings.mysql_enabled:
+            raise RuntimeError(
+                "MySQL is required. Set MYSQL_HOST, MYSQL_DATABASE, MYSQL_USER, and MYSQL_PASSWORD."
+            )
 
     def table(self, logical_name: str) -> str:
         safe = re.sub(r"[^a-zA-Z0-9_]", "", logical_name)
-        return f"{self.settings.table_prefix}{safe}" if self.using_mysql else safe
+        return f"{self.settings.table_prefix}{safe}"
 
     def physical_sql(self, sql: str) -> str:
-        if not self.using_mysql:
-            return sql
         converted = sql
         for table in sorted(LOGICAL_TABLES, key=len, reverse=True):
             converted = re.sub(rf"\b{table}\b", self.table(table), converted)
         return converted.replace("?", "%s")
-
-    def sqlite_conn(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        return conn
 
     def mysql_engine(self):
         if self._engine is None:
@@ -234,18 +190,6 @@ class Database:
             kwargs["ssl"] = ssl_options
         return pymysql.connect(**kwargs)
 
-    def disable_mysql_for_session(self, exc: Exception) -> None:
-        self._mysql_available = False
-        self.last_mysql_error = f"{type(exc).__name__}: {exc}"
-        self._engine = None
-
-    def ensure_sqlite(self) -> None:
-        with file_lock(INIT_LOCK_PATH):
-            if not self.table_exists("features"):
-                if not initialize_from_extracted_csv():
-                    initialize_all()
-            self.ensure_operational_tables()
-
     def mysql_identifier(self, name: str) -> str:
         safe = re.sub(r"[^a-zA-Z0-9_]", "", str(name))
         if not safe:
@@ -259,15 +203,6 @@ class Database:
             return "DOUBLE"
         if pd.api.types.is_bool_dtype(series):
             return "TINYINT(1)"
-        return "TEXT"
-
-    def sqlite_column_type(self, series: pd.Series) -> str:
-        if pd.api.types.is_integer_dtype(series):
-            return "INTEGER"
-        if pd.api.types.is_float_dtype(series):
-            return "REAL"
-        if pd.api.types.is_bool_dtype(series):
-            return "INTEGER"
         return "TEXT"
 
     def create_mysql_table_for_frame(self, table_name: str, frame: pd.DataFrame) -> None:
@@ -302,118 +237,91 @@ class Database:
             conn.close()
 
     def existing_columns(self, table_name: str) -> set[str]:
+        self.require_mysql()
         if not self.table_exists(table_name):
             return set()
-        if self.using_mysql:
-            conn = self.mysql_conn()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(
-                        "SELECT column_name FROM information_schema.columns "
-                        "WHERE table_schema=%s AND table_name=%s",
-                        (self.settings.mysql_database, self.table(table_name)),
-                    )
-                    return {row["column_name"] for row in cur.fetchall()}
-            finally:
-                conn.close()
-        with self.sqlite_conn() as conn:
-            return {row["name"] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT column_name FROM information_schema.columns "
+                    "WHERE table_schema=%s AND table_name=%s",
+                    (self.settings.mysql_database, self.table(table_name)),
+                )
+                return {row["column_name"] for row in cur.fetchall()}
+        finally:
+            conn.close()
 
     def ensure_table_columns(self, table_name: str, frame: pd.DataFrame) -> None:
+        self.require_mysql()
         if not self.table_exists(table_name):
             return
         existing = self.existing_columns(table_name)
         missing = [column for column in frame.columns if column not in existing and column != MYSQL_INTERNAL_ID]
         if not missing:
             return
-        if self.using_mysql:
-            conn = self.mysql_conn()
-            try:
-                with conn.cursor() as cur:
-                    for column in missing:
-                        cur.execute(
-                            f"ALTER TABLE {self.mysql_identifier(self.table(table_name))} "
-                            f"ADD COLUMN {self.mysql_identifier(column)} {self.mysql_column_type(frame[column])} NULL"
-                        )
-            finally:
-                conn.close()
-            return
-        with self.sqlite_conn() as conn:
-            for column in missing:
-                conn.execute(
-                    f"ALTER TABLE {table_name} ADD COLUMN {self.mysql_identifier(column)} {self.sqlite_column_type(frame[column])}"
-                )
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                for column in missing:
+                    cur.execute(
+                        f"ALTER TABLE {self.mysql_identifier(self.table(table_name))} "
+                        f"ADD COLUMN {self.mysql_identifier(column)} {self.mysql_column_type(frame[column])} NULL"
+                    )
+        finally:
+            conn.close()
 
     def query_all(self, sql: str, params: tuple = ()) -> list[dict]:
         self.ensure()
-        if self.using_mysql:
-            conn = self.mysql_conn()
-            try:
-                with conn.cursor() as cur:
-                    cur.execute(self.physical_sql(sql), params)
-                    return list(cur.fetchall())
-            finally:
-                conn.close()
-        with self.sqlite_conn() as conn:
-            cur = conn.execute(sql, params)
-            return [dict(row) for row in cur.fetchall()]
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(self.physical_sql(sql), params)
+                return list(cur.fetchall())
+        finally:
+            conn.close()
 
     def query_one(self, sql: str, params: tuple = ()) -> dict | None:
         rows = self.query_all(sql, params)
         return rows[0] if rows else None
 
-    def read_table(self, table_name: str, limit: int | None = None) -> pd.DataFrame:
-        self.ensure()
+    def read_table(self, table_name: str, limit: int | None = None, ensure_db: bool = True) -> pd.DataFrame:
+        if ensure_db:
+            self.ensure()
+        self.require_mysql()
         sql = f"SELECT * FROM {table_name}"
         if limit:
             sql += f" LIMIT {int(limit)}"
-        if self.using_mysql:
-            return pd.read_sql_query(self.physical_sql(sql), self.mysql_engine())
-        with self.sqlite_conn() as conn:
-            return pd.read_sql_query(sql, conn)
+        return pd.read_sql_query(self.physical_sql(sql), self.mysql_engine())
 
     def write_table(self, table_name: str, frame: pd.DataFrame, if_exists: str = "replace") -> None:
-        if self.using_mysql:
-            if if_exists == "replace":
-                self.drop_mysql_table(table_name)
+        self.require_mysql()
+        if if_exists == "replace":
+            self.drop_mysql_table(table_name)
+            self.create_mysql_table_for_frame(table_name, frame)
+            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
+        elif if_exists == "append":
+            if not self.table_exists(table_name):
                 self.create_mysql_table_for_frame(table_name, frame)
-                frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
-            elif if_exists == "append":
-                if not self.table_exists(table_name):
-                    self.create_mysql_table_for_frame(table_name, frame)
-                else:
-                    self.ensure_table_columns(table_name, frame)
-                frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
             else:
-                frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists=if_exists, index=False)
-            return
-        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with self.sqlite_conn() as conn:
-            if if_exists == "append" and self.table_exists(table_name):
                 self.ensure_table_columns(table_name, frame)
-            frame.to_sql(table_name, conn, if_exists=if_exists, index=False)
+            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
+        else:
+            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists=if_exists, index=False)
 
     def table_exists(self, table_name: str) -> bool:
-        if self.using_mysql:
-            from sqlalchemy import text
+        self.require_mysql()
+        from sqlalchemy import text
 
-            with self.mysql_engine().connect() as conn:
-                row = conn.execute(
-                    text(
-                        "SELECT COUNT(*) AS count FROM information_schema.tables "
-                        "WHERE table_schema=:schema AND table_name=:table"
-                    ),
-                    {"schema": self.settings.mysql_database, "table": self.table(table_name)},
-                ).fetchone()
-                return bool(row and row[0])
-        if not DB_PATH.exists():
-            return False
-        with self.sqlite_conn() as conn:
+        with self.mysql_engine().connect() as conn:
             row = conn.execute(
-                "SELECT COUNT(*) AS count FROM sqlite_master WHERE type='table' AND name=?",
-                (table_name,),
+                text(
+                    "SELECT COUNT(*) AS count FROM information_schema.tables "
+                    "WHERE table_schema=:schema AND table_name=:table"
+                ),
+                {"schema": self.settings.mysql_database, "table": self.table(table_name)},
             ).fetchone()
-            return bool(row and row["count"])
+            return bool(row and row[0])
 
     def ensure_operational_tables(self) -> None:
         for table_name, columns in OPERATIONAL_TABLES.items():
@@ -421,18 +329,20 @@ class Database:
                 self.write_table(table_name, pd.DataFrame(columns=columns), if_exists="replace")
 
     def ensure(self) -> None:
-        if self.using_mysql:
-            try:
-                if not self.table_exists("features"):
-                    self.initialize_from_extracted_csv()
-                self.ensure_operational_tables()
-                self._mysql_available = True
-                return
-            except Exception as exc:
-                if self.settings.mysql_strict:
-                    raise
-                self.disable_mysql_for_session(exc)
-        self.ensure_sqlite()
+        if self._ensured:
+            return
+        self.require_mysql()
+        try:
+            if not self.table_exists("features"):
+                self.initialize_from_extracted_csv()
+            self.ensure_operational_tables()
+            self.apply_app_migrations()
+            self._mysql_available = True
+            self._ensured = True
+        except Exception as exc:
+            self.last_mysql_error = str(exc)
+            self._mysql_available = False
+            raise
 
     def initialize_from_extracted_csv(self) -> None:
         required = {
@@ -447,11 +357,7 @@ class Database:
         }
         missing = [str(path) for path in required.values() if not path.exists()]
         if missing:
-            if self.using_mysql:
-                raise RuntimeError(f"Missing extracted CSV snapshots: {missing}")
-            if not initialize_from_extracted_csv():
-                initialize_all()
-            return
+            raise RuntimeError(f"Missing extracted CSV snapshots: {missing}")
 
         tables = {name: pd.read_csv(path) for name, path in required.items()}
         tables["features"] = compute_features(tables["polling_stations"], tables["polling_results"])
@@ -460,10 +366,82 @@ class Database:
             self.write_table(table_name, frame, if_exists="replace")
 
     def recompute_features(self) -> None:
-        stations = self.read_table("polling_stations")
-        results = self.read_table("polling_results")
+        stations = self.read_table("polling_stations", ensure_db=False)
+        results = self.read_table("polling_results", ensure_db=False)
         features = compute_features(stations, results)
         self.write_table("features", features, if_exists="replace")
+
+    def apply_app_migrations(self) -> None:
+        self.migrate_candidate_profiles()
+        self.migrate_ward_registration()
+        self.migrate_sentiment_data()
+        if self.table_exists("polling_stations") and self.table_exists("polling_results"):
+            self.recompute_features()
+
+    def migrate_ward_registration(self) -> None:
+        snapshot = EXTRACTED_DIR / "ward_registration.csv"
+        if snapshot.exists():
+            frame = pd.read_csv(snapshot)
+            self.write_table("ward_registration", frame, if_exists="replace")
+
+    def migrate_candidate_profiles(self) -> None:
+        if not self.table_exists("candidate_profiles"):
+            return
+        frame = self.read_table("candidate_profiles", ensure_db=False)
+        columns = {
+            "candidate_id": "",
+            "candidate_name": "",
+            "party": "",
+            "election_year": 2027,
+            "status": "",
+            "profile_summary": "",
+            "known_strongholds": "",
+            "known_weaknesses": "",
+            "source_type": "",
+            "is_placeholder": 0,
+        }
+        for column, default in columns.items():
+            if column not in frame.columns:
+                frame[column] = default
+
+        name = "Hon. Silverster Ogina"
+        mask = frame["candidate_name"].astype(str).str.strip().eq(name)
+        silverster_record = {
+            "candidate_id": "REAL_2027_SILVERSTER_OGINA",
+            "candidate_name": name,
+            "party": "NEDP",
+            "election_year": 2027,
+            "status": "Incoming MCA - campaign principal",
+            "profile_summary": "Incoming MCA campaign principal for Embakasi Ward.",
+            "known_strongholds": "Embakasi Ward campaign network, resident engagement, field intelligence.",
+            "known_weaknesses": "Requires continued station-level mobilization and fresh resident feedback.",
+            "source_type": "campaign_record",
+            "is_placeholder": 0,
+        }
+        if mask.any():
+            for column, value in silverster_record.items():
+                frame.loc[mask, column] = value
+        else:
+            frame = pd.concat([frame, pd.DataFrame([silverster_record])], ignore_index=True)
+        election_year = pd.to_numeric(frame["election_year"], errors="coerce").fillna(0).astype(int)
+        frame = frame[(election_year != 2027) | frame["candidate_name"].astype(str).str.strip().eq(name)]
+        self.write_table("candidate_profiles", frame, if_exists="replace")
+
+    def migrate_sentiment_data(self) -> None:
+        if not self.table_exists("sentiment_data"):
+            return
+        frame = self.read_table("sentiment_data", ensure_db=False)
+        if "candidate_name" not in frame.columns:
+            return
+        for column, default in {"source_type": "campaign_record", "is_placeholder": 0}.items():
+            if column not in frame.columns:
+                frame[column] = default
+        mask = frame["candidate_name"].astype(str).str.strip().eq("Hon. Silverster Ogina")
+        frame = frame[mask].copy()
+        if not frame.empty:
+            frame.loc[:, "source_type"] = "campaign_record"
+            frame.loc[:, "is_placeholder"] = 0
+        self.write_table("sentiment_data", frame, if_exists="replace")
 
 
 DB = Database()

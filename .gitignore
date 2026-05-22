@@ -39,7 +39,7 @@ electoral_intelligence/frontend/static/css/*
 electoral_intelligence/frontend/static/js/*
 !electoral_intelligence/frontend/static/js/app.js
 
-# Extracted one-time data snapshots used to seed SQLite/MySQL.
+# Extracted one-time data snapshots used to seed MySQL.
 !data/
 data/*
 !data/extracted_real/
