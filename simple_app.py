@@ -209,21 +209,11 @@ ISSUE_ALIASES = {
 
 @app.route("/")
 def dashboard():
-    stats = one(
-        """
-        SELECT
-            COUNT(*) AS total_stations,
-            AVG(turnout_rate_2022) AS avg_turnout,
-            SUM(CASE WHEN mobilization_tier = 'Critical Priority' THEN 1 ELSE 0 END) AS critical_priority,
-            SUM(CASE WHEN mobilization_tier = 'High Priority' THEN 1 ELSE 0 END) AS high_priority_count
-        FROM features
-        """
-    ) or {}
     summary = {
-        "total_stations": stats.get("total_stations", 0),
-        "avg_turnout": round((stats.get("avg_turnout") or 0) * 100, 1),
-        "critical_priority": stats.get("critical_priority", 0),
-        "high_priority": stats.get("high_priority_count", 0),
+        "total_stations": 0,
+        "avg_turnout": 0,
+        "critical_priority": 0,
+        "high_priority": 0,
         "ward_name": "Embakasi",
         "constituency": "Embakasi East",
         "county": "Nairobi County",

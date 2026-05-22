@@ -36,9 +36,11 @@ LOGICAL_TABLES = [
     "data_sources",
     "admin_audit_log",
     "data_versions",
+    "app_metadata",
 ]
 
 MYSQL_INTERNAL_ID = "record_id"
+APP_DATA_MIGRATION_VERSION = "2026-05-22-speed-v1"
 
 OPERATIONAL_TABLES = {
     "admin_audit_log": [
@@ -57,6 +59,11 @@ OPERATIONAL_TABLES = {
         "action",
         "row_count",
         "snapshot_json",
+    ],
+    "app_metadata": [
+        "key_name",
+        "value",
+        "updated_at",
     ],
 }
 
@@ -369,6 +376,42 @@ class Database:
             if not self.table_exists(table_name):
                 self.write_table(table_name, pd.DataFrame(columns=columns), if_exists="replace")
 
+    def app_metadata_value(self, key_name: str) -> str:
+        if not self.table_exists("app_metadata"):
+            return ""
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT {self.mysql_identifier('value')} FROM {self.mysql_identifier(self.table('app_metadata'))} "
+                    f"WHERE {self.mysql_identifier('key_name')}=%s ORDER BY {self.mysql_identifier(MYSQL_INTERNAL_ID)} DESC LIMIT 1",
+                    (key_name,),
+                )
+                row = cur.fetchone()
+                return str(row["value"]) if row and row.get("value") is not None else ""
+        finally:
+            conn.close()
+
+    def set_app_metadata_value(self, key_name: str, value: str) -> None:
+        from datetime import datetime
+
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"DELETE FROM {self.mysql_identifier(self.table('app_metadata'))} "
+                    f"WHERE {self.mysql_identifier('key_name')}=%s",
+                    (key_name,),
+                )
+                cur.execute(
+                    f"INSERT INTO {self.mysql_identifier(self.table('app_metadata'))} "
+                    f"({self.mysql_identifier('key_name')}, {self.mysql_identifier('value')}, {self.mysql_identifier('updated_at')}) "
+                    "VALUES (%s, %s, %s)",
+                    (key_name, value, datetime.utcnow().isoformat(timespec="seconds") + "Z"),
+                )
+        finally:
+            conn.close()
+
     def ensure(self) -> None:
         if self._ensured:
             return
@@ -380,7 +423,9 @@ class Database:
                 if not self.table_exists("features"):
                     self.initialize_from_extracted_csv()
                 self.ensure_operational_tables()
-                self.apply_app_migrations()
+                if self.app_metadata_value("app_data_migration_version") != APP_DATA_MIGRATION_VERSION:
+                    self.apply_app_migrations()
+                    self.set_app_metadata_value("app_data_migration_version", APP_DATA_MIGRATION_VERSION)
                 self._mysql_available = True
                 self._ensured = True
             except Exception as exc:

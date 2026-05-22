@@ -6,17 +6,50 @@ const CAMPAIGN_BADGE = '<span class="badge bg-success ms-1">Campaign</span>';
 document.addEventListener('DOMContentLoaded', function() {
     initializeThemeToggle();
     renderAssistantHistory();
-    loadStatistics();
-    loadPollingStations();
-    loadBattlegrounds();
-    loadMobilizationPlan();
-    loadCandidatesData();
-    loadVoteShiftsData();
-    loadSentimentData();
-    renderCompetitivenessChart();
-    renderMobilizationChart();
+    initializeLazyTabs();
+    loadTabData('overview');
     wirePlotlyResizeHandlers();
 });
+
+const loadedTabs = new Set();
+
+function initializeLazyTabs() {
+    document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', event => {
+            const target = event.target.getAttribute('href') || '';
+            loadTabData(target.replace('#', ''));
+        });
+    });
+}
+
+function loadTabData(tabId) {
+    if (!tabId || loadedTabs.has(tabId)) return;
+    loadedTabs.add(tabId);
+    const loaders = {
+        overview: () => {
+            loadStatistics();
+            runWhenIdle(() => {
+                renderCompetitivenessChart();
+                renderMobilizationChart();
+            });
+        },
+        mobilization: loadMobilizationPlan,
+        'polling-stations': loadPollingStations,
+        battlegrounds: loadBattlegrounds,
+        candidates: loadCandidatesData,
+        'historical-results': loadVoteShiftsData,
+        sentiment: loadSentimentData
+    };
+    if (loaders[tabId]) loaders[tabId]();
+}
+
+function runWhenIdle(callback) {
+    if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(callback, { timeout: 900 });
+    } else {
+        window.setTimeout(callback, 120);
+    }
+}
 
 function initializeThemeToggle() {
     const root = document.documentElement;
@@ -133,7 +166,18 @@ function wirePlotlyResizeHandlers() {
 async function loadStatistics() {
     const data = await fetchAPI('/statistics');
     if (!data || !data.success) return;
-    console.log('Statistics loaded:', data.data);
+    const stats = data.data || {};
+    const totalStations = document.getElementById('metric-total-stations');
+    const averageTurnout = document.getElementById('metric-average-turnout');
+    const criticalPriority = document.getElementById('metric-critical-priority');
+    const highPriority = document.getElementById('metric-high-priority');
+    if (totalStations) totalStations.textContent = fmtNumber(stats.total_stations);
+    if (averageTurnout) averageTurnout.textContent = `${Number(stats.average_turnout_pct || 0).toFixed(1)}%`;
+    if (criticalPriority) criticalPriority.textContent = fmtNumber(stats.critical_stations);
+    if (highPriority) {
+        const tiers = stats.stations_by_mobilization || {};
+        highPriority.textContent = fmtNumber(tiers['High Priority'] || 0);
+    }
 }
 
 async function loadPollingStations() {
