@@ -5,11 +5,17 @@ from __future__ import annotations
 import os
 import secrets
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, make_response, render_template, request
 
+from app_cache import response_cache
 from database import DB
 from ai_assistant import ai_status, answer_question
 from electoral_intelligence.backend.admin_panel import admin_bp
+
+try:
+    from flask_compress import Compress
+except ImportError:  # pragma: no cover - dependency is installed in production
+    Compress = None
 
 
 app = Flask(
@@ -20,18 +26,70 @@ app = Flask(
 app.secret_key = os.getenv("SECRET_KEY") or os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
 app.config.update(
     MAX_CONTENT_LENGTH=int(os.getenv("MAX_UPLOAD_MB", "10")) * 1024 * 1024,
+    SEND_FILE_MAX_AGE_DEFAULT=int(os.getenv("STATIC_CACHE_SECONDS", "3600")),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
     SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "false").lower() in {"1", "true", "yes", "on"},
+    COMPRESS_MIMETYPES=[
+        "text/html",
+        "text/css",
+        "text/xml",
+        "application/json",
+        "application/javascript",
+        "text/javascript",
+        "image/svg+xml",
+    ],
+    COMPRESS_LEVEL=int(os.getenv("COMPRESS_LEVEL", "6")),
+    COMPRESS_MIN_SIZE=int(os.getenv("COMPRESS_MIN_SIZE", "500")),
 )
+if Compress:
+    Compress(app)
 app.register_blueprint(admin_bp)
 
 def ensure_database() -> None:
     DB.ensure()
 
 
+def cacheable_request() -> bool:
+    if request.method != "GET":
+        return False
+    if request.path.startswith("/admin") or request.path.startswith("/static"):
+        return False
+    if request.path in {"/api/assistant", "/api/system/database", "/api/system/ai"}:
+        return False
+    return request.path == "/" or request.path.startswith("/api/")
+
+
+def cache_ttl_for_path(path: str) -> int:
+    if path == "/":
+        return 30
+    if path.startswith("/api/polling-stations") or path.startswith("/api/battlegrounds"):
+        return 90
+    if path.startswith("/api/mca/") or path.startswith("/api/mobilization"):
+        return 60
+    return 45
+
+
+def cache_key() -> str:
+    return f"{request.method}:{request.full_path}"
+
+
+@app.before_request
+def serve_cached_response():
+    if not cacheable_request():
+        return None
+    entry = response_cache.get(cache_key())
+    if not entry:
+        return None
+    response = make_response(entry.body, entry.status_code)
+    for header, value in entry.headers.items():
+        response.headers[header] = value
+    response.headers["X-Cache"] = "HIT"
+    return response
+
+
 @app.after_request
-def add_security_headers(response):
+def finalize_response(response):
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -39,6 +97,22 @@ def add_security_headers(response):
         "Permissions-Policy",
         "camera=(), microphone=(), geolocation=()",
     )
+    if cacheable_request() and response.status_code == 200 and response.direct_passthrough is False:
+        response.headers.setdefault("Cache-Control", "private, max-age=0, must-revalidate")
+        response.headers["X-Cache"] = response.headers.get("X-Cache", "MISS")
+        headers = {
+            "Content-Type": response.headers.get("Content-Type", ""),
+            "Cache-Control": response.headers.get("Cache-Control", ""),
+        }
+        response_cache.set(
+            cache_key(),
+            response.status_code,
+            headers,
+            response.get_data(),
+            ttl=cache_ttl_for_path(request.path),
+        )
+    elif request.path.startswith("/admin") or request.path.startswith("/api/system") or request.path == "/api/assistant":
+        response.headers.setdefault("Cache-Control", "no-store")
     return response
 
 

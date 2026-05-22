@@ -42,3 +42,7 @@ The app uses prefixed database tables through `DB_TABLE_PREFIX=eii_`. On Render,
 The admin panel accepts either pre-scored sentiment rows or raw resident feedback.
 
 For English `raw_text`, the app scores sentiment locally with VADER. For Swahili/non-English `raw_text`, it tries the configured Gemini/Groq model, then falls back to a local keyword scorer if AI is unavailable.
+
+## Performance
+
+The app enables response compression and short-lived server-side caching for public dashboard reads. Admin uploads and manual inserts clear the public cache immediately.

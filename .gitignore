@@ -13,6 +13,7 @@
 !README.md
 !simple_app.py
 !database.py
+!app_cache.py
 !canonical_data_loader.py
 !ai_assistant.py
 !sentiment_engine.py

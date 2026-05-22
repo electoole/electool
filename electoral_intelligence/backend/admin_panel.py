@@ -23,6 +23,7 @@ from pathlib import Path
 import json
 from datetime import datetime
 
+from app_cache import clear_public_cache
 from database import DB
 from sentiment_engine import classify_text, polarity_counts
 
@@ -590,6 +591,7 @@ def upload_data():
             DB.write_table(table_name, df_clean, if_exists='append')
             msg = f"Added {len(df_clean)} records to {table_name.replace('_', ' ')}"
         recompute_features_if_needed(table_name)
+        clear_public_cache()
         audit_admin_action(
             "upload",
             table_name=table_name,
@@ -671,6 +673,7 @@ def insert_data_manual(table_name):
         
         DB.write_table(table_name, df_clean, if_exists='append')
         recompute_features_if_needed(table_name)
+        clear_public_cache()
         audit_admin_action("manual_insert", table_name=table_name, row_count=1, status="success")
         
         return jsonify({
