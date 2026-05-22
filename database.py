@@ -149,7 +149,7 @@ class Database:
             connect_args: dict[str, Any] = {}
             connect_args["connect_timeout"] = 5
             ssl_options = self.mysql_ssl_options()
-            if ssl_options:
+            if ssl_options is not None:
                 connect_args["ssl"] = ssl_options
             self._engine = create_engine(url, pool_pre_ping=True, pool_recycle=1800, connect_args=connect_args)
         return self._engine
@@ -168,8 +168,17 @@ class Database:
                 self._ssl_ca_path = ca_file
             return {"ca": str(self._ssl_ca_path)}
         if self.settings.mysql_ssl_ca:
-            return {"ca": str(self.resolve_path(self.settings.mysql_ssl_ca))}
-        return None
+            raw_ca = self.settings.mysql_ssl_ca
+            if "BEGIN CERTIFICATE" in raw_ca:
+                if self._ssl_ca_path is None:
+                    ca_file = Path(tempfile.gettempdir()) / "eii_mysql_ca.pem"
+                    ca_file.write_text(raw_ca, encoding="utf-8")
+                    self._ssl_ca_path = ca_file
+                return {"ca": str(self._ssl_ca_path)}
+            ca_path = self.resolve_path(raw_ca)
+            if ca_path.exists():
+                return {"ca": str(ca_path)}
+        return {}
 
     def mysql_conn(self):
         import pymysql
@@ -186,7 +195,7 @@ class Database:
             "connect_timeout": 5,
         }
         ssl_options = self.mysql_ssl_options()
-        if ssl_options:
+        if ssl_options is not None:
             kwargs["ssl"] = ssl_options
         return pymysql.connect(**kwargs)
 
