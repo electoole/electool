@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,16 +8,45 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
+        :root {
+            --admin-bg: #f6f7f9;
+            --admin-surface: #ffffff;
+            --admin-surface-alt: #f8f9ff;
+            --admin-text: #1f2933;
+            --admin-muted: #5f6b7a;
+            --admin-border: #d8dee6;
+            --admin-header-bg: #1f2933;
+            --admin-accent: #667eea;
+            --admin-hover: #f5f5f5;
+            --admin-input-bg: #ffffff;
+            --admin-input-text: #1f2933;
+        }
+
+        html[data-theme="dark"] {
+            --admin-bg: #101820;
+            --admin-surface: #17212b;
+            --admin-surface-alt: #1e2b37;
+            --admin-text: #e5edf5;
+            --admin-muted: #a6b3c2;
+            --admin-border: #304050;
+            --admin-header-bg: #0f1720;
+            --admin-accent: #8aa5ff;
+            --admin-hover: #22303d;
+            --admin-input-bg: #101820;
+            --admin-input-text: #e5edf5;
+        }
+
         body {
-            background: #f6f7f9;
+            background: var(--admin-bg);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             overflow-x: hidden;
+            color: var(--admin-text);
         }
         
         .admin-container {
-            background: white;
-            border: 1px solid #d8dee6;
+            background: var(--admin-surface);
+            border: 1px solid var(--admin-border);
             border-radius: 4px;
             box-shadow: none;
             margin: 20px auto;
@@ -26,7 +55,7 @@
         }
         
         .admin-header {
-            background: #1f2933;
+            background: var(--admin-header-bg);
             color: white;
             padding: 30px;
             text-align: center;
@@ -46,7 +75,7 @@
         
         .tabs-nav {
             display: flex;
-            border-bottom: 2px solid #f0f0f0;
+            border-bottom: 2px solid var(--admin-border);
             overflow-x: auto;
             overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
@@ -58,7 +87,7 @@
             background: none;
             cursor: pointer;
             font-size: 1rem;
-            color: #666;
+            color: var(--admin-muted);
             border-bottom: 3px solid transparent;
             transition: all 0.3s ease;
             white-space: nowrap;
@@ -66,12 +95,12 @@
         }
         
         .tab-button:hover {
-            color: #667eea;
+            color: var(--admin-accent);
         }
         
         .tab-button.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: var(--admin-accent);
+            border-bottom-color: var(--admin-accent);
             font-weight: 600;
         }
         
@@ -203,6 +232,84 @@
             overflow-x: auto;
         }
 
+        .form-control,
+        .form-select {
+            background: var(--admin-input-bg);
+            color: var(--admin-input-text);
+            border-color: var(--admin-border);
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background: var(--admin-input-bg);
+            color: var(--admin-input-text);
+        }
+
+        .text-muted {
+            color: var(--admin-muted) !important;
+        }
+
+        .alert-info,
+        .alert-secondary,
+        .alert-light {
+            background: var(--admin-surface-alt);
+            color: var(--admin-text);
+            border-color: var(--admin-border);
+        }
+
+        .table {
+            --bs-table-bg: var(--admin-surface);
+            --bs-table-color: var(--admin-text);
+            --bs-table-border-color: var(--admin-border);
+            --bs-table-hover-bg: var(--admin-hover);
+            --bs-table-hover-color: var(--admin-text);
+        }
+
+        .theme-toggle {
+            width: 46px;
+            height: 26px;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            border-radius: 999px;
+            background: transparent;
+            color: #ffffff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 3px 6px;
+            cursor: pointer;
+            vertical-align: middle;
+        }
+
+        .theme-toggle-icon {
+            width: 15px;
+            height: 15px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            opacity: 0.45;
+        }
+
+        html[data-theme="light"] .theme-toggle-sun,
+        html[data-theme="dark"] .theme-toggle-moon {
+            opacity: 1;
+        }
+
+        html[data-theme="dark"] .admin-container,
+        html[data-theme="dark"] .card-stat,
+        html[data-theme="dark"] .form-section,
+        html[data-theme="dark"] .manual-form,
+        html[data-theme="dark"] .upload-area {
+            background: var(--admin-surface);
+            color: var(--admin-text);
+            border-color: var(--admin-border);
+        }
+
+        html[data-theme="dark"] .tabs-nav {
+            border-bottom-color: var(--admin-border);
+        }
+
         @media (max-width: 768px) {
             .admin-container {
                 margin: 0;
@@ -285,6 +392,15 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                 <a class="btn btn-outline-light btn-sm me-2" href="/">Back to Dashboard</a>
                 <button class="btn btn-light btn-sm" type="submit">Sign out</button>
+                <button class="theme-toggle ms-2" id="admin-theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+                    <svg class="theme-toggle-icon theme-toggle-sun" viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"></path>
+                    </svg>
+                    <svg class="theme-toggle-icon theme-toggle-moon" viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M21 14.5A8.5 8.5 0 0 1 9.5 3a7 7 0 1 0 11.5 11.5Z"></path>
+                    </svg>
+                </button>
             </form>
         </div>
         
@@ -365,7 +481,7 @@
                         <option value="polling_stations">Polling Stations</option>
                         <option value="candidate_profiles">Candidate Profiles</option>
                         <option value="polling_results">Polling Results (by Station)</option>
-                        <option value="sentiment_data">Social Sentiment Data</option>
+                        <option value="sentiment_data">Resident Sentiment Data</option>
                         <option value="demographics">Demographics Data</option>
                         <option value="historical_winners">Historical Winners</option>
                         <option value="ward_registration">Ward Registration</option>
@@ -376,22 +492,6 @@
                     Select the table type. Your CSV must have the correct columns.
                 </p>
                 <div id="uploadSchemaHelp" class="alert alert-secondary mt-3" style="display:none;"></div>
-            </div>
-            
-            <div class="form-section">
-                <h4>Merge Mode</h4>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mergeMode" id="mergeReplace" value="replace" checked>
-                    <label class="form-check-label" for="mergeReplace">
-                        <strong>Replace:</strong> Delete existing data and insert new
-                    </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="mergeMode" id="mergeAppend" value="append">
-                    <label class="form-check-label" for="mergeAppend">
-                        <strong>Append:</strong> Keep existing data and add new records
-                    </label>
-                </div>
             </div>
             
             <div class="form-section">
@@ -555,6 +655,32 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         }
+
+        function initializeAdminThemeToggle() {
+            const root = document.documentElement;
+            const button = document.getElementById('admin-theme-toggle');
+            const storedTheme = localStorage.getItem('elections-admin-theme') || localStorage.getItem('elections-theme');
+            const preferredTheme = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+            function applyTheme(theme) {
+                const normalized = theme === 'dark' ? 'dark' : 'light';
+                root.setAttribute('data-theme', normalized);
+                localStorage.setItem('elections-admin-theme', normalized);
+                if (button) {
+                    button.setAttribute('aria-label', normalized === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+                    button.setAttribute('title', normalized === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+                }
+            }
+
+            applyTheme(storedTheme || preferredTheme);
+            if (button) {
+                button.addEventListener('click', event => {
+                    event.preventDefault();
+                    const nextTheme = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+                    applyTheme(nextTheme);
+                });
+            }
+        }
         
         // ====================================================================
         // OVERVIEW: LOAD STATISTICS
@@ -615,6 +741,7 @@
             $.ajaxSetup({
                 headers: {'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').content}
             });
+            initializeAdminThemeToggle();
             loadTableSchemas();
             loadStats();
             loadAuditLog();
@@ -658,7 +785,6 @@
         function uploadFile() {
             const file = fileInput.files[0];
             const table = document.getElementById('uploadTableSelect').value;
-            const mergeMode = document.querySelector('input[name="mergeMode"]:checked').value;
             
             if (!file || !table) {
                 alert('Please select both a file and data type');
@@ -668,7 +794,7 @@
             const formData = new FormData();
             formData.append('file', file);
             formData.append('table_name', table);
-            formData.append('merge_mode', mergeMode);
+            formData.append('merge_mode', 'auto');
             
             $.ajax({
                 url: '/admin/api/upload',

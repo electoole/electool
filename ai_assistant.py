@@ -142,7 +142,7 @@ def build_dashboard_context() -> str:
         SELECT candidate_name, AVG(sentiment_score) AS sentiment_score,
                SUM(total_mentions) AS total_mentions, MAX(source_type) AS source_type
         FROM sentiment_data
-        WHERE candidate_name != 'Nyantika Ricardo Billy'
+        WHERE candidate_name = 'Hon. Silverster Ogina'
         GROUP BY candidate_name
         ORDER BY total_mentions DESC
         LIMIT 8
@@ -154,6 +154,7 @@ def build_dashboard_context() -> str:
                AVG(sentiment_score) AS sentiment_score, MAX(source_type) AS source_type
         FROM sentiment_data
         WHERE primary_theme IS NOT NULL AND primary_theme != ''
+          AND candidate_name = 'Hon. Silverster Ogina'
         GROUP BY primary_theme
         ORDER BY total_mentions DESC
         LIMIT 8

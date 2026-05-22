@@ -174,7 +174,8 @@ def dashboard():
         "critical_priority": stats.get("critical_priority", 0),
         "high_priority": stats.get("high_priority_count", 0),
         "ward_name": "Embakasi",
-        "constituency": "Nairobi County",
+        "constituency": "Embakasi East",
+        "county": "Nairobi County",
         "timestamp": "",
     }
     return render_template("dashboard.html", summary=summary)
@@ -417,7 +418,7 @@ def api_sentiment_summary():
                CASE WHEN candidate_name = 'Hon. Silverster Ogina' THEN 'campaign_record' ELSE MAX(source_type) END AS source_type,
                CASE WHEN candidate_name = 'Hon. Silverster Ogina' THEN 0 ELSE MAX(is_placeholder) END AS is_placeholder
         FROM sentiment_data
-        WHERE candidate_name != 'Nyantika Ricardo Billy'
+        WHERE candidate_name = 'Hon. Silverster Ogina'
         GROUP BY candidate_name
         ORDER BY total_mentions DESC
         """
@@ -445,6 +446,7 @@ def api_social_issues():
             MAX(is_placeholder) AS is_placeholder
         FROM sentiment_data
         WHERE primary_theme IS NOT NULL AND primary_theme != ''
+          AND candidate_name = 'Hon. Silverster Ogina'
         GROUP BY primary_theme
         """
     )

@@ -42,6 +42,7 @@ ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "")
 LOGIN_ATTEMPTS: dict[str, list[float]] = {}
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_WINDOW_SECONDS = 15 * 60
+AUTO_REPLACE_TABLES = {'polling_stations', 'demographics', 'historical_winners', 'ward_registration'}
 
 
 def admin_password_valid(password: str) -> bool:
@@ -66,6 +67,11 @@ def login_rate_limited(remote_addr: str) -> bool:
 def record_failed_login(remote_addr: str) -> None:
     attempts = LOGIN_ATTEMPTS.setdefault(remote_addr, [])
     attempts.append(time.time())
+
+
+def automatic_upload_mode(table_name: str) -> str:
+    """Use a safe default so uploaders do not choose destructive behavior manually."""
+    return "replace" if table_name in AUTO_REPLACE_TABLES else "append"
 
 
 def require_admin(view):
@@ -522,8 +528,7 @@ def upload_data():
     Handle CSV file upload and database insertion
     Parameters:
         - table_name: target table name
-        - file: CSV file to upload
-        - merge_mode: 'replace' or 'append'
+        - file: CSV or XLSX file to upload
     """
     try:
         if 'file' not in request.files:
@@ -534,7 +539,9 @@ def upload_data():
         
         file = request.files['file']
         table_name = request.form.get('table_name').lower()
-        merge_mode = request.form.get('merge_mode', 'replace')
+        merge_mode = request.form.get('merge_mode', 'auto')
+        if merge_mode == 'auto':
+            merge_mode = automatic_upload_mode(table_name)
         if merge_mode not in {'replace', 'append'}:
             return jsonify({'error': 'Invalid merge mode'}), 400
         
@@ -578,10 +585,10 @@ def upload_data():
         if merge_mode == 'replace':
             save_table_version(table_name, "replace_upload")
             DB.write_table(table_name, df_clean, if_exists='replace')
-            msg = f"Replaced {len(df_clean)} records"
+            msg = f"Updated {table_name.replace('_', ' ')} with {len(df_clean)} records"
         else:  # append
             DB.write_table(table_name, df_clean, if_exists='append')
-            msg = f"Appended {len(df_clean)} records"
+            msg = f"Added {len(df_clean)} records to {table_name.replace('_', ' ')}"
         recompute_features_if_needed(table_name)
         audit_admin_action(
             "upload",
@@ -589,7 +596,7 @@ def upload_data():
             row_count=len(df_clean),
             status="success",
             details={
-                "merge_mode": merge_mode,
+                "upload_mode": merge_mode,
                 "filename": filename,
                 "duplicates_removed": duplicates_removed,
             },
@@ -602,7 +609,7 @@ def upload_data():
                 'rows_imported': len(df_clean),
                 'duplicates_removed': duplicates_removed,
                 'table': table_name,
-                'merge_mode': merge_mode,
+                'upload_mode': merge_mode,
                 'file_saved': str(filepath)
             }
         }), 200

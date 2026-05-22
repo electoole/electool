@@ -10,13 +10,11 @@ document.addEventListener('DOMContentLoaded', function() {
     loadPollingStations();
     loadBattlegrounds();
     loadMobilizationPlan();
-    loadCandidatePerformance();
     loadCandidatesData();
     loadVoteShiftsData();
     loadSentimentData();
     renderCompetitivenessChart();
     renderMobilizationChart();
-    renderResultsSummary();
     wirePlotlyResizeHandlers();
 });
 
@@ -276,29 +274,6 @@ function renderUntappedTable(stations) {
     container.innerHTML = `${html}</tbody></table>`;
 }
 
-async function loadCandidatePerformance() {
-    const data = await fetchAPI('/candidate-performance');
-    if (!data || !data.success) return;
-    const candidates = data.data || [];
-    const container = document.getElementById('results-summary');
-    if (!container || !candidates.length) return;
-    let html = `
-        <table class="table table-sm align-middle">
-            <thead class="table-dark">
-                <tr><th>Candidate</th><th>Party</th><th>Total Votes</th><th>Source</th></tr>
-            </thead><tbody>`;
-    candidates.forEach((candidate, index) => {
-        html += `
-            <tr class="${index === 0 ? 'bg-light' : ''}">
-                <td><strong>${esc(candidate.candidate_name)}</strong></td>
-                <td>${esc(candidate.party)}</td>
-                <td>${fmtNumber(candidate.total_votes)}</td>
-                <td>${placeholderBadge(candidate) || '<span class="badge bg-success">Official</span>'}</td>
-            </tr>`;
-    });
-    container.innerHTML = `${html}</tbody></table>`;
-}
-
 function renderCompetitivenessChart() {
     fetch('/api/polling-stations').then(r => r.json()).then(data => {
         if (!data.success) return;
@@ -339,24 +314,6 @@ function renderMobilizationChart() {
     });
 }
 
-function renderResultsSummary() {
-    fetch('/api/candidate-performance').then(r => r.json()).then(data => {
-        if (!data.success) return;
-        const candidates = (data.data || []).slice(0, 5).reverse();
-        const trace = {
-            x: candidates.map(c => c.total_votes),
-            y: candidates.map(c => c.candidate_name),
-            type: 'bar',
-            orientation: 'h',
-            marker: { color: '#3498db' }
-        };
-        const layout = compactPlotLayout('2022 Candidate Vote Totals', 320);
-        layout.width = chartWidth('results-summary');
-        layout.xaxis.title = 'Votes';
-        Plotly.react('results-summary', [trace], layout, plotConfig());
-    });
-}
-
 async function loadCandidatesData() {
     const data = await fetchAPI('/candidates/performance-history');
     if (!data || !data.success) return;
@@ -364,7 +321,7 @@ async function loadCandidatesData() {
 
     renderYearTable('candidates-2017-table', byYear['2017'] || [], '2017');
     renderYearTable('candidates-2022-table', byYear['2022'] || [], '2022');
-    renderAspirantsTable('candidates-2027-table', byYear['2027'] || []);
+    renderAspirantsTable('candidates-2027-table', (byYear['2027'] || []).filter(row => row.candidate_name === 'Hon. Silverster Ogina'));
 }
 
 function renderYearTable(containerId, rows, year) {

@@ -7,6 +7,7 @@
 !Procfile
 !render.yaml
 !runtime.txt
+!.python-version
 !requirements.txt
 !DEPLOYMENT.md
 !README.md
