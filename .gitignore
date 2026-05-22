@@ -54,6 +54,7 @@ data/extracted_real/*
 *.db
 *.sqlite
 *.sqlite3
+data/.db-init.lock
 __pycache__/
 *.pyc
 .pytest_cache/

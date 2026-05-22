@@ -5,6 +5,8 @@ import os
 import re
 import sqlite3
 import tempfile
+import time
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,7 @@ from canonical_data_loader import DB_PATH, EXTRACTED_DIR, compute_features, init
 
 ROOT = Path(__file__).resolve().parent
 load_dotenv(ROOT / ".env")
+INIT_LOCK_PATH = ROOT / "data" / ".db-init.lock"
 
 LOGICAL_TABLES = [
     "polling_stations",
@@ -84,6 +87,46 @@ def sanitize_prefix(prefix: str) -> str:
     if not cleaned.endswith("_"):
         cleaned += "_"
     return cleaned
+
+
+@contextmanager
+def file_lock(path: Path, timeout: int = 60):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    lock_file = path.open("w")
+    started = time.time()
+    locked = False
+    try:
+        while not locked:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                locked = True
+            except OSError:
+                if time.time() - started > timeout:
+                    raise TimeoutError(f"Timed out waiting for database init lock: {path}")
+                time.sleep(0.2)
+        yield
+    finally:
+        if locked:
+            try:
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(lock_file.fileno(), msvcrt.LK_UNLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+            finally:
+                lock_file.close()
+        else:
+            lock_file.close()
 
 
 @dataclass(frozen=True)
@@ -197,10 +240,11 @@ class Database:
         self._engine = None
 
     def ensure_sqlite(self) -> None:
-        if not DB_PATH.exists():
-            if not initialize_from_extracted_csv():
-                initialize_all()
-        self.ensure_operational_tables()
+        with file_lock(INIT_LOCK_PATH):
+            if not self.table_exists("features"):
+                if not initialize_from_extracted_csv():
+                    initialize_all()
+            self.ensure_operational_tables()
 
     def mysql_identifier(self, name: str) -> str:
         safe = re.sub(r"[^a-zA-Z0-9_]", "", str(name))

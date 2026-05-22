@@ -13,7 +13,7 @@ pip install -r requirements.txt
 Start command:
 
 ```bash
-gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+gunicorn simple_app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
 ```
 
 The same commands are already configured in `render.yaml`.
