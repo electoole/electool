@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -114,6 +115,7 @@ class Database:
         self.last_mysql_error: str = ""
         self._ssl_ca_path: Path | None = None
         self._ensured = False
+        self._ensure_lock = threading.Lock()
 
     @property
     def using_mysql(self) -> bool:
@@ -237,6 +239,36 @@ class Database:
         finally:
             conn.close()
 
+    def normalize_mysql_value(self, value: Any) -> Any:
+        if pd.isna(value):
+            return None
+        if hasattr(value, "item"):
+            try:
+                return value.item()
+            except ValueError:
+                return value
+        return value
+
+    def insert_mysql_frame(self, table_name: str, frame: pd.DataFrame) -> None:
+        if frame.empty:
+            return
+        columns = [column for column in frame.columns if column != MYSQL_INTERNAL_ID]
+        if not columns:
+            return
+        column_sql = ", ".join(self.mysql_identifier(column) for column in columns)
+        placeholders = ", ".join(["%s"] * len(columns))
+        sql = f"INSERT INTO {self.mysql_identifier(self.table(table_name))} ({column_sql}) VALUES ({placeholders})"
+        values = [
+            tuple(self.normalize_mysql_value(row[column]) for column in columns)
+            for _, row in frame.iterrows()
+        ]
+        conn = self.mysql_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.executemany(sql, values)
+        finally:
+            conn.close()
+
     def drop_mysql_table(self, table_name: str) -> None:
         conn = self.mysql_conn()
         try:
@@ -308,15 +340,15 @@ class Database:
         if if_exists == "replace":
             self.drop_mysql_table(table_name)
             self.create_mysql_table_for_frame(table_name, frame)
-            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
+            self.insert_mysql_frame(table_name, frame)
         elif if_exists == "append":
             if not self.table_exists(table_name):
                 self.create_mysql_table_for_frame(table_name, frame)
             else:
                 self.ensure_table_columns(table_name, frame)
-            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
+            self.insert_mysql_frame(table_name, frame)
         else:
-            frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists=if_exists, index=False)
+            raise ValueError(f"Unsupported write mode for MySQL table {table_name!r}: {if_exists!r}")
 
     def table_exists(self, table_name: str) -> bool:
         self.require_mysql()
@@ -340,18 +372,21 @@ class Database:
     def ensure(self) -> None:
         if self._ensured:
             return
-        self.require_mysql()
-        try:
-            if not self.table_exists("features"):
-                self.initialize_from_extracted_csv()
-            self.ensure_operational_tables()
-            self.apply_app_migrations()
-            self._mysql_available = True
-            self._ensured = True
-        except Exception as exc:
-            self.last_mysql_error = str(exc)
-            self._mysql_available = False
-            raise
+        with self._ensure_lock:
+            if self._ensured:
+                return
+            self.require_mysql()
+            try:
+                if not self.table_exists("features"):
+                    self.initialize_from_extracted_csv()
+                self.ensure_operational_tables()
+                self.apply_app_migrations()
+                self._mysql_available = True
+                self._ensured = True
+            except Exception as exc:
+                self.last_mysql_error = str(exc)
+                self._mysql_available = False
+                raise
 
     def initialize_from_extracted_csv(self) -> None:
         required = {
