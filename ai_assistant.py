@@ -188,7 +188,7 @@ def build_dashboard_context() -> str:
             f"- {r['candidate_name']}: sentiment={round(r['sentiment_score'] or 0, 2)}, mentions={r['total_mentions']}, source={r['source_type']}"
             for r in sentiment
         )
-        + "\n\nConstituency social issue signals:\n"
+        + "\n\nEmbakasi Ward resident issue signals:\n"
         + "\n".join(
             f"- {r['primary_theme']}: sentiment={round(r['sentiment_score'] or 0, 2)}, mentions={r['total_mentions']}, source={r['source_type']}"
             for r in issues

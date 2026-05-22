@@ -426,7 +426,8 @@ def api_sentiment_summary():
         source = row.get("source_type")
         records = int(row.get("record_count") or 0)
         total = int(float(row.get("total_mentions") or 0))
-        if source in {"demo_placeholder", "campaign_record"} and records >= 10:
+        average_per_record = total / records if records else total
+        if source in {"demo_placeholder", "campaign_record"} and records >= 10 and average_per_record > 20:
             row["total_mentions"] = max(8, round(total / records))
         row.pop("record_count", None)
     return jsonify({"success": True, "data": data})

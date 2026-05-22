@@ -217,6 +217,15 @@ class Database:
             return "TINYINT(1)"
         return "TEXT"
 
+    def sqlite_column_type(self, series: pd.Series) -> str:
+        if pd.api.types.is_integer_dtype(series):
+            return "INTEGER"
+        if pd.api.types.is_float_dtype(series):
+            return "REAL"
+        if pd.api.types.is_bool_dtype(series):
+            return "INTEGER"
+        return "TEXT"
+
     def create_mysql_table_for_frame(self, table_name: str, frame: pd.DataFrame) -> None:
         table_sql = self.mysql_identifier(self.table(table_name))
         columns: list[str] = []
@@ -247,6 +256,49 @@ class Database:
                 cur.execute(f"DROP TABLE IF EXISTS {self.mysql_identifier(self.table(table_name))}")
         finally:
             conn.close()
+
+    def existing_columns(self, table_name: str) -> set[str]:
+        if not self.table_exists(table_name):
+            return set()
+        if self.using_mysql:
+            conn = self.mysql_conn()
+            try:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT column_name FROM information_schema.columns "
+                        "WHERE table_schema=%s AND table_name=%s",
+                        (self.settings.mysql_database, self.table(table_name)),
+                    )
+                    return {row["column_name"] for row in cur.fetchall()}
+            finally:
+                conn.close()
+        with self.sqlite_conn() as conn:
+            return {row["name"] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()}
+
+    def ensure_table_columns(self, table_name: str, frame: pd.DataFrame) -> None:
+        if not self.table_exists(table_name):
+            return
+        existing = self.existing_columns(table_name)
+        missing = [column for column in frame.columns if column not in existing and column != MYSQL_INTERNAL_ID]
+        if not missing:
+            return
+        if self.using_mysql:
+            conn = self.mysql_conn()
+            try:
+                with conn.cursor() as cur:
+                    for column in missing:
+                        cur.execute(
+                            f"ALTER TABLE {self.mysql_identifier(self.table(table_name))} "
+                            f"ADD COLUMN {self.mysql_identifier(column)} {self.mysql_column_type(frame[column])} NULL"
+                        )
+            finally:
+                conn.close()
+            return
+        with self.sqlite_conn() as conn:
+            for column in missing:
+                conn.execute(
+                    f"ALTER TABLE {table_name} ADD COLUMN {self.mysql_identifier(column)} {self.sqlite_column_type(frame[column])}"
+                )
 
     def query_all(self, sql: str, params: tuple = ()) -> list[dict]:
         self.ensure()
@@ -285,12 +337,16 @@ class Database:
             elif if_exists == "append":
                 if not self.table_exists(table_name):
                     self.create_mysql_table_for_frame(table_name, frame)
+                else:
+                    self.ensure_table_columns(table_name, frame)
                 frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists="append", index=False)
             else:
                 frame.to_sql(self.table(table_name), self.mysql_engine(), if_exists=if_exists, index=False)
             return
         DB_PATH.parent.mkdir(parents=True, exist_ok=True)
         with self.sqlite_conn() as conn:
+            if if_exists == "append" and self.table_exists(table_name):
+                self.ensure_table_columns(table_name, frame)
             frame.to_sql(table_name, conn, if_exists=if_exists, index=False)
 
     def table_exists(self, table_name: str) -> bool:

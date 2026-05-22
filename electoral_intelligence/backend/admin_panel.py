@@ -24,6 +24,7 @@ import json
 from datetime import datetime
 
 from database import DB
+from sentiment_engine import classify_text, polarity_counts
 
 # Create admin blueprint
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -117,7 +118,7 @@ ALLOWED_TABLES = {
         'description': 'Polling station results (all candidates per station)'
     },
     'sentiment_data': {
-        'required_columns': ['date', 'candidate_name', 'total_mentions', 'sentiment_score'],
+        'required_columns': ['date', 'candidate_name'],
         'description': 'Resident sentiment and issue-signal data'
     },
     'demographics': {
@@ -178,20 +179,23 @@ UPLOAD_TEMPLATES = {
         'notes': 'polling_station_id must already exist in polling_stations. votes must be zero or higher.'
     },
     'sentiment_data': {
-        'columns': ['date', 'candidate_name', 'total_mentions', 'positive_mentions', 'neutral_mentions', 'negative_mentions', 'primary_theme', 'sentiment_score', 'source_type', 'is_placeholder'],
+        'columns': ['date', 'candidate_name', 'raw_text', 'location', 'source_channel', 'total_mentions', 'positive_mentions', 'neutral_mentions', 'negative_mentions', 'primary_theme', 'sentiment_score', 'source_type', 'is_placeholder'],
         'example': {
             'date': '2026-05-22',
             'candidate_name': 'Hon. Silverster Ogina',
-            'total_mentions': 24,
-            'positive_mentions': 10,
-            'neutral_mentions': 9,
-            'negative_mentions': 5,
-            'primary_theme': 'Water Supply',
-            'sentiment_score': 0.21,
+            'raw_text': 'Residents in Tassia say water supply has been unreliable this week.',
+            'location': 'Tassia',
+            'source_channel': 'field_note',
+            'total_mentions': 1,
+            'positive_mentions': '',
+            'neutral_mentions': '',
+            'negative_mentions': '',
+            'primary_theme': '',
+            'sentiment_score': '',
             'source_type': 'admin_uploaded',
             'is_placeholder': 0,
         },
-        'notes': 'Use this for coded resident interactions, field notes, and public discussion. sentiment_score must be between -1 and 1. total_mentions should equal positive + neutral + negative when those columns are supplied.'
+        'notes': 'Upload either pre-scored rows with sentiment_score, or raw_text rows. English raw_text is scored with VADER; Swahili/non-English raw_text uses the configured AI model, then a local fallback. sentiment_score must be between -1 and 1.'
     },
     'demographics': {
         'columns': ['unit_name', 'total_population_2019', 'households', 'male_population', 'female_population'],
@@ -245,8 +249,63 @@ def validate_csv_structure(df, table_name):
     
     if missing_cols:
         return False, f"Missing required columns: {', '.join(missing_cols)}"
+    if table_name == 'sentiment_data':
+        has_raw_text = 'raw_text' in df.columns and df['raw_text'].fillna('').astype(str).str.strip().ne('').any()
+        has_scored = {'total_mentions', 'sentiment_score'}.issubset(df.columns)
+        if not has_raw_text and not has_scored:
+            return False, "Sentiment uploads need either raw_text or both total_mentions and sentiment_score columns"
     
     return True, "Structure valid"
+
+
+def prepare_sentiment_data(df):
+    """Score raw resident text rows and fill derived sentiment columns."""
+    df = df.copy()
+    for column, default in {
+        'total_mentions': 1,
+        'positive_mentions': pd.NA,
+        'neutral_mentions': pd.NA,
+        'negative_mentions': pd.NA,
+        'primary_theme': '',
+        'sentiment_score': pd.NA,
+        'language': '',
+        'sentiment_method': '',
+    }.items():
+        if column not in df.columns:
+            df[column] = default
+
+    if 'raw_text' not in df.columns:
+        return df
+
+    for idx, row in df.iterrows():
+        raw_text = str(row.get('raw_text') or '').strip()
+        if not raw_text:
+            continue
+        score_missing = pd.isna(row.get('sentiment_score')) or str(row.get('sentiment_score')).strip() == ''
+        theme_missing = pd.isna(row.get('primary_theme')) or str(row.get('primary_theme')).strip() == ''
+        method_missing = pd.isna(row.get('sentiment_method')) or str(row.get('sentiment_method')).strip() == ''
+        language_missing = pd.isna(row.get('language')) or str(row.get('language')).strip() == ''
+        if score_missing or theme_missing or method_missing or language_missing:
+            result = classify_text(raw_text)
+            if score_missing:
+                df.at[idx, 'sentiment_score'] = result.sentiment_score
+            if theme_missing:
+                df.at[idx, 'primary_theme'] = result.primary_theme
+            if method_missing:
+                df.at[idx, 'sentiment_method'] = result.sentiment_method
+            if language_missing:
+                df.at[idx, 'language'] = result.language
+        mentions = int(pd.to_numeric(pd.Series([df.at[idx, 'total_mentions']]), errors='coerce').fillna(1).iloc[0] or 1)
+        missing_counts = any(
+            pd.isna(df.at[idx, col]) or str(df.at[idx, col]).strip() == ''
+            for col in ['positive_mentions', 'neutral_mentions', 'negative_mentions']
+        )
+        if missing_counts:
+            positive, neutral, negative = polarity_counts(float(df.at[idx, 'sentiment_score'] or 0), mentions)
+            df.at[idx, 'positive_mentions'] = positive
+            df.at[idx, 'neutral_mentions'] = neutral
+            df.at[idx, 'negative_mentions'] = negative
+    return df
 
 
 def validate_data_relationships(df, table_name):
@@ -506,6 +565,9 @@ def upload_data():
         is_valid, validation_msg = validate_csv_structure(df, table_name)
         if not is_valid:
             return jsonify({'error': validation_msg}), 400
+
+        if table_name == 'sentiment_data':
+            df = prepare_sentiment_data(df)
         
         # Clean data
         df_clean, duplicates_removed = clean_data(df, table_name)
@@ -593,6 +655,8 @@ def insert_data_manual(table_name):
         
         # Create DataFrame and clean
         df = pd.DataFrame([data])
+        if table_name == 'sentiment_data':
+            df = prepare_sentiment_data(df)
         df_clean, _ = clean_data(df, table_name)
         values_valid, values_msg = validate_data_relationships(df_clean, table_name)
         if not values_valid:
